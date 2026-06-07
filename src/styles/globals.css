@@ -5,13 +5,13 @@
 @layer base {
   body {
     background-color: theme('colors.ink');
-    color: theme('colors.slate.200');
+    color: #1A1814;
     font-family: theme('fontFamily.sans');
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   :root {
-    --agent-glow: rgba(167, 139, 250, 0.15);
+    --agent-glow: rgba(124, 58, 237, 0.10);
   }
 }
