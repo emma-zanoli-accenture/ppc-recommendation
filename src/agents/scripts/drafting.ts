@@ -145,4 +145,9 @@ Click "Apply" on each item to insert the pre-written content, or click "Auto-com
     suggestions,
     gaps,
   } satisfies DraftingOutput,
+  sources: [
+    { id: 'pb-4', relevance: 'Section structure and regulatory scaffolding modelled on this precedent' },
+    { id: 'pb-5', relevance: 'Bilateral offtake template and draft resolution wording' },
+    { id: 'pb-2', relevance: 'FX exposure section and Treasury sign-off language' },
+  ],
 }

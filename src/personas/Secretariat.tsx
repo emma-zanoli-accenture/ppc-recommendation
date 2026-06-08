@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { useRecoStore } from '@/store'
+import { useUIStore } from '@/store/uiStore'
 import AgentPanel from '@/components/AgentPanel'
 import RecoCard from '@/components/RecoCard'
 import StatusBadge from '@/components/StatusBadge'
@@ -483,6 +484,7 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
   const updateReadinessScore = useRecoStore((s) => s.updateReadinessScore)
   const generateBoDPack = useRecoStore((s) => s.generateBoDPack)
   const submitToBoD = useRecoStore((s) => s.submitToBoD)
+  const setOpenPrecedentId = useUIStore((s) => s.setOpenPrecedentId)
 
   const [agentOutput, setAgentOutput] = useState<ReadinessOutput | null>(null)
   const [chairmanOpen, setChairmanOpen] = useState(false)
@@ -703,6 +705,7 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
               deadline: String(days) + 'd',
             }}
             onComplete={handleAgentComplete}
+            onSourceClick={setOpenPrecedentId}
           />
 
           {/* Actions */}

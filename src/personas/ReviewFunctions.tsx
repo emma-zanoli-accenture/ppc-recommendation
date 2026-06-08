@@ -7,12 +7,13 @@ import {
   TrendingUp,
   ShieldCheck,
   CheckCircle2,
-  XCircle,
+  RotateCcw,
   Bell,
   Clock,
   AlertTriangle,
 } from 'lucide-react'
 import { useRecoStore } from '@/store'
+import { useUIStore } from '@/store/uiStore'
 import AgentPanel from '@/components/AgentPanel'
 import RecoCard from '@/components/RecoCard'
 import StatusBadge from '@/components/StatusBadge'
@@ -349,6 +350,7 @@ function RFReviewView({
   const reco = useRecoStore((s) => s.recommendations.find((r) => r.id === recoId))
   const approveReview = useRecoStore((s) => s.approveReview)
   const returnForUpdate = useRecoStore((s) => s.returnForUpdate)
+  const setOpenPrecedentId = useUIStore((s) => s.setOpenPrecedentId)
 
   const [comment, setComment] = useState('')
   const [agentOutput, setAgentOutput] = useState<unknown>(null)
@@ -403,7 +405,7 @@ function RFReviewView({
           }`}
         >
           {wasReturned ? (
-            <XCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+            <RotateCcw className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
           ) : (
             <CheckCircle2 className="w-6 h-6 text-emerald-500 flex-shrink-0 mt-0.5" />
           )}
@@ -577,6 +579,7 @@ function RFReviewView({
               reviewer: fnCfg.reviewer,
             }}
             onComplete={handleAgentComplete}
+            onSourceClick={setOpenPrecedentId}
           />
 
           {/* Structured output panel */}
@@ -620,7 +623,7 @@ function RFReviewView({
                 {currentReview?.status === 'Approved' ? (
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                 ) : (
-                  <XCircle className="w-4 h-4 flex-shrink-0" />
+                  <RotateCcw className="w-4 h-4 flex-shrink-0" />
                 )}
                 {currentReview?.status}
               </div>
@@ -644,7 +647,7 @@ function RFReviewView({
                     disabled={!comment.trim()}
                     className="bg-amber-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                   >
-                    <XCircle className="w-3.5 h-3.5" />
+                    <RotateCcw className="w-3.5 h-3.5" />
                     Return
                   </button>
                   <button

@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, ChevronDown, Play, RotateCcw, Zap, Package, ListOrdered, Code2, ArrowRight } from 'lucide-react'
+import { Check, ChevronDown, Play, RotateCcw, Zap, Package, ListOrdered, Code2, ArrowRight, BookOpen, ExternalLink } from 'lucide-react'
 import { useAgent } from '@/agents/engine'
 import type { AgentScript } from '@/agents/engine'
+import { KB_PAST_RECS_BY_ID } from '@/data/knowledgeBase'
 import AgentBadge from './AgentBadge'
 
 interface Props {
   script: AgentScript
   inputs?: Record<string, string>
   onComplete?: (output: unknown) => void
+  onSourceClick?: (id: string) => void
   className?: string
 }
 
@@ -90,9 +92,11 @@ function StatusPill({ phase }: { phase: string }) {
 function UnderTheHoodPanel({
   script,
   inputs,
+  onSourceClick,
 }: {
   script: AgentScript
   inputs?: Record<string, string>
+  onSourceClick?: (id: string) => void
 }) {
   return (
     <div className="border-t border-border-subtle bg-ink/60 p-5 space-y-5 font-mono text-xs">
@@ -151,6 +155,37 @@ function UnderTheHoodPanel({
         </ol>
       </div>
 
+      {/* Knowledge base sources */}
+      {script.sources && script.sources.length > 0 && (
+        <div>
+          <p className="text-[10px] uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1.5">
+            <BookOpen className="w-3 h-3" />
+            Knowledge base sources ({script.sources.length})
+          </p>
+          <div className="space-y-1.5 pl-1">
+            {script.sources.map((src) => {
+              const rec = KB_PAST_RECS_BY_ID.get(src.id)
+              return (
+                <div key={src.id} className="flex gap-2">
+                  <span className="text-brand shrink-0 font-mono text-[10px] mt-0.5">{src.id}</span>
+                  <div>
+                    {rec && (
+                      <button
+                        onClick={() => onSourceClick?.(src.id)}
+                        className="text-slate-600 hover:text-brand transition-colors text-left"
+                      >
+                        {rec.title}
+                      </button>
+                    )}
+                    <p className="text-slate-400 text-[10px] leading-snug mt-0.5">{src.relevance}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Structured output */}
       {script.structuredOutput != null && (
         <div>
@@ -167,7 +202,7 @@ function UnderTheHoodPanel({
   )
 }
 
-export default function AgentPanel({ script, inputs, onComplete, className = '' }: Props) {
+export default function AgentPanel({ script, inputs, onComplete, onSourceClick, className = '' }: Props) {
   const [underHood, setUnderHood] = useState(false)
   const { phase, visibleSteps, streamedText, run, reset } = useAgent(script, onComplete)
 
@@ -316,6 +351,43 @@ export default function AgentPanel({ script, inputs, onComplete, className = '' 
         )}
       </AnimatePresence>
 
+      {/* Grounded in — always visible when done and sources exist */}
+      <AnimatePresence>
+        {phase === 'done' && script.sources && script.sources.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="px-4 pb-3"
+          >
+            <div className="bg-brand-subtle/60 border border-brand/15 rounded-xl p-3">
+              <p className="text-[10px] uppercase tracking-widest text-brand/70 font-semibold mb-2 flex items-center gap-1.5">
+                <BookOpen className="w-3 h-3" />
+                Grounded in · {script.sources.length} past recommendation{script.sources.length !== 1 ? 's' : ''}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {script.sources.map((src) => {
+                  const rec = KB_PAST_RECS_BY_ID.get(src.id)
+                  if (!rec) return null
+                  return (
+                    <button
+                      key={src.id}
+                      onClick={() => onSourceClick?.(src.id)}
+                      title={src.relevance}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border bg-surface text-brand border-brand/20 hover:border-brand/50 hover:bg-brand/5 transition-all"
+                    >
+                      <span className="truncate max-w-[160px]">{rec.title}</span>
+                      <ExternalLink className="w-3 h-3 flex-shrink-0 opacity-50" />
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Under the Hood panel */}
       <AnimatePresence>
         {underHood && (
@@ -326,7 +398,7 @@ export default function AgentPanel({ script, inputs, onComplete, className = '' 
             transition={{ duration: 0.22 }}
             style={{ overflow: 'hidden' }}
           >
-            <UnderTheHoodPanel script={script} inputs={inputs} />
+            <UnderTheHoodPanel script={script} inputs={inputs} onSourceClick={onSourceClick} />
           </motion.div>
         )}
       </AnimatePresence>

@@ -11,7 +11,7 @@ interface Props {
   index?: number
 }
 
-const REVIEW_LABELS = { legal: 'L', finance: 'F', compliance: 'C' }
+const REVIEW_LABELS = { legal: 'Legal', finance: 'Finance', compliance: 'Compliance' }
 
 const REVIEW_STATUS_CLASSES: Record<string, string> = {
   Pending: 'bg-slate-100 text-slate-400 border-slate-200',
@@ -61,8 +61,8 @@ export default function RecoCard({ recommendation: r, onClick, index = 0 }: Prop
             return (
               <span
                 key={fn}
-                title={`${fn.charAt(0).toUpperCase() + fn.slice(1)}: ${status}`}
-                className={`w-5 h-5 text-[10px] font-bold flex items-center justify-center rounded border ${REVIEW_STATUS_CLASSES[status] ?? REVIEW_STATUS_CLASSES.Pending}`}
+                title={`${REVIEW_LABELS[fn]}: ${status}`}
+                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${REVIEW_STATUS_CLASSES[status] ?? REVIEW_STATUS_CLASSES.Pending}`}
               >
                 {REVIEW_LABELS[fn]}
               </span>

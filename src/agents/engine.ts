@@ -6,6 +6,7 @@ export interface AgentScript {
   steps: string[]
   result: string
   structuredOutput?: unknown
+  sources?: { id: string; relevance: string }[]
 }
 
 export type AgentPhase = 'idle' | 'thinking' | 'stepping' | 'streaming' | 'done'

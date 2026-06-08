@@ -1,4 +1,4 @@
-import { Users, Scale, Crown, BookOpen, RotateCcw } from 'lucide-react'
+import { Users, Scale, Crown, BookOpen, RotateCcw, Database } from 'lucide-react'
 import { useUIStore, type Persona } from '@/store/uiStore'
 import { useRecoStore } from '@/store'
 import { APP_NAME, PPC_CLIENT } from '@/lib/constants'
@@ -19,7 +19,7 @@ function Badge({ count }: { count: number }) {
 }
 
 export default function TopBar() {
-  const { persona, setPersona, demoGuideOpen, toggleDemoGuide, resetUI } = useUIStore()
+  const { persona, setPersona, demoGuideOpen, toggleDemoGuide, resetUI, kbOpen, setKbOpen } = useUIStore()
   const recommendations = useRecoStore((s) => s.recommendations)
   const resetDemo = useRecoStore((s) => s.resetDemo)
 
@@ -84,6 +84,19 @@ export default function TopBar() {
 
       {/* Right controls */}
       <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={() => setKbOpen(!kbOpen)}
+          title="Knowledge Base"
+          className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border transition-all ${
+            kbOpen
+              ? 'bg-brand text-white border-brand shadow-sm'
+              : 'text-slate-500 border-border-subtle hover:bg-surface-raised'
+          }`}
+        >
+          <Database className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Knowledge Base</span>
+        </button>
+
         <button
           onClick={toggleDemoGuide}
           title="Demo Guide"

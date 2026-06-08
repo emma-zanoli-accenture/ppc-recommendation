@@ -54,4 +54,9 @@ All other provisions are consistent with applicable Greek and EU energy law. Thr
     ],
     verdict: 'Approved with conditions',
   } satisfies LegalReviewOutput,
+  sources: [
+    { id: 'pb-1', relevance: 'REMIT Art. 4 pre-trade notification was a mandatory condition precedent — same pattern applied here' },
+    { id: 'pb-3', relevance: 'EMIR OTC derivative addendum precedent; REGIS-TR designation wording reused' },
+    { id: 'pb-7', relevance: 'RAAEY prior-notification procedure confirmed applicable; filing template on file' },
+  ],
 }

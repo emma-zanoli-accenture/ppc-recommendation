@@ -54,4 +54,8 @@ Recommendation is Ready for BoD. The Corporate Secretary may now schedule the it
     ],
     bodPackReady: true,
   } satisfies ReadinessOutput,
+  sources: [
+    { id: 'pb-6', relevance: 'Cross-border BoD pack structure and readiness checklist' },
+    { id: 'pb-8', relevance: 'Counterparty credit assessment precedent; Fitch BB+ appetite confirmed in prior Board resolution' },
+  ],
 }

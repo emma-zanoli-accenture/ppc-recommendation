@@ -3,17 +3,22 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
   ChevronRight,
+  ChevronDown,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
+  RotateCcw,
   MessageSquare,
   Send,
   Sparkles,
   Bot,
   Check,
   Zap,
+  Pencil,
+  Scale,
+  ExternalLink,
 } from 'lucide-react'
 import { useRecoStore } from '@/store'
+import { useUIStore } from '@/store/uiStore'
 import AgentPanel from '@/components/AgentPanel'
 import RecoCard from '@/components/RecoCard'
 import StatusBadge from '@/components/StatusBadge'
@@ -55,6 +60,89 @@ const REVIEW_STATUS_CLS: Record<string, string> = {
   'In Review': 'text-blue-600',
   Approved: 'text-emerald-600',
   Returned: 'text-amber-600',
+}
+
+// ─── Regulatory reference data & badge ───────────────────────────────────────
+
+const REG_REF_INFO: Record<string, { fullName: string; description: string; source: string }> = {
+  'REMIT Art. 4': {
+    fullName: 'REMIT — Regulation (EU) No 1227/2011',
+    description: 'Wholesale Energy Market Integrity & Transparency. Mandatory pre-trade notification to ACER before contract signature; non-compliance constitutes market manipulation.',
+    source: 'EU Regulation · European Parliament & Council',
+  },
+  'EMIR Refit': {
+    fullName: 'EMIR Refit — Regulation (EU) 2019/834',
+    description: 'European Market Infrastructure Regulation. OTC derivative reporting, clearing threshold assessment, and trade repository registration (REGIS-TR or DTCC).',
+    source: 'EU Regulation · European Parliament & Council',
+  },
+  'ACER Guidance 2025': {
+    fullName: 'ACER — Agency for the Cooperation of Energy Regulators',
+    description: 'Cross-border capacity allocation oversight and REMIT enforcement guidance. Recipient of pre-trade notifications under REMIT Art. 4.',
+    source: 'ACER Market Monitoring Report 2025',
+  },
+  'RAAEY L.4001/2011 Art. 11': {
+    fullName: 'RAAEY — Regulatory Authority for Energy',
+    description: 'Greek national energy regulator (successor to RAE). Prior notification required under Law 4001/2011 Art. 11 for cross-border commercial arrangements.',
+    source: 'Greek Law · Ministry of Environment & Energy',
+  },
+  'MiFID II Art. 2(1)(j)': {
+    fullName: 'MiFID II — Directive 2014/65/EU',
+    description: 'Markets in Financial Instruments Directive. Art. 2(1)(j) commodity derivative exemption — classification review required for bilateral energy forwards.',
+    source: 'EU Directive · European Parliament & Council',
+  },
+  'HEnEx Market Coupling Rules': {
+    fullName: 'HEnEx — Hellenic Energy Exchange',
+    description: 'Cross-border capacity allocation and market coupling rules. HEnEx–HUPX coupling scheduled for 2027; bilateral arrangements must align with coupling timeline.',
+    source: 'HEnEx Exchange Rules · 2025',
+  },
+}
+
+function RegulatoryRefBadge({
+  refKey,
+  isOpen,
+  onToggle,
+}: {
+  refKey: string
+  isOpen: boolean
+  onToggle: () => void
+}) {
+  const info = REG_REF_INFO[refKey]
+  return (
+    <div className="relative">
+      <button
+        onClick={onToggle}
+        className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-all ${
+          isOpen
+            ? 'bg-brand text-white border-brand shadow-sm'
+            : 'bg-brand-subtle text-brand border-brand/20 hover:border-brand/50 hover:bg-brand/10'
+        }`}
+      >
+        <Scale className="w-3 h-3 flex-shrink-0" />
+        <span className="font-mono">{refKey}</span>
+        <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown className="w-3 h-3 flex-shrink-0" />
+        </motion.span>
+      </button>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+            className="absolute left-0 top-full mt-1.5 z-30 w-64 bg-surface border border-border-strong rounded-xl shadow-lg p-3 space-y-1.5"
+          >
+            <p className="text-xs font-semibold text-slate-800 leading-snug">{info?.fullName ?? refKey}</p>
+            <p className="text-xs text-slate-600 leading-relaxed">{info?.description}</p>
+            <p className="text-[10px] text-slate-400 border-t border-border-subtle pt-1.5 flex items-center gap-1">
+              <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+              {info?.source}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
@@ -307,6 +395,7 @@ function BUDraftView({
   const reco = useRecoStore((s) => s.recommendations.find((r) => r.id === recoId))
   const applyDraftingOutput = useRecoStore((s) => s.applyDraftingOutput)
   const updateContent = useRecoStore((s) => s.updateContent)
+  const setOpenPrecedentId = useUIStore((s) => s.setOpenPrecedentId)
 
   // Pre-populate appliedIds on mount by comparing section bodies to template stubs
   const [appliedIds, setAppliedIds] = useState<Set<string>>(() => {
@@ -325,6 +414,9 @@ function BUDraftView({
   // typewriter: live display text while a section is being written in
   const [typing, setTyping] = useState<{ sectionId: string; displayText: string } | null>(null)
   const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
+  const [editBody, setEditBody] = useState('')
+  const [activeRef, setActiveRef] = useState<string | null>(null)
 
   const totalItems = ALL_DRAFT_ITEMS.length
   const appliedCount = appliedIds.size
@@ -394,6 +486,16 @@ function BUDraftView({
     setTyping(null)
   }, [reco, appliedIds, recoId, updateContent])
 
+  const saveDraftEdit = useCallback((sectionId: string, body: string) => {
+    if (!reco) return
+    updateContent(recoId, {
+      contentSections: reco.contentSections.map((s) =>
+        s.id === sectionId ? { ...s, body } : s
+      ),
+    })
+    setEditingSectionId(null)
+  }, [reco, recoId, updateContent])
+
   if (!reco) return null
 
   const hasSections = reco.contentSections.length > 0
@@ -438,14 +540,14 @@ function BUDraftView({
             <>
               {/* Regulatory refs */}
               {reco.regulatoryRefs.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {reco.regulatoryRefs.map((ref) => (
-                    <span
+                    <RegulatoryRefBadge
                       key={ref}
-                      className="bg-brand-subtle text-brand text-xs font-medium px-2.5 py-0.5 rounded-full border border-brand/20"
-                    >
-                      {ref}
-                    </span>
+                      refKey={ref}
+                      isOpen={activeRef === ref}
+                      onToggle={() => setActiveRef(activeRef === ref ? null : ref)}
+                    />
                   ))}
                 </div>
               )}
@@ -462,11 +564,13 @@ function BUDraftView({
                     <motion.div
                       key={section.id}
                       layout
-                      className={`bg-surface rounded-xl p-4 transition-all duration-200 border ${
+                      className={`group bg-surface rounded-xl p-4 transition-all duration-200 border ${
                         typing_
                           ? 'ring-2 ring-agent/60 border-agent-dim/50 shadow-sm shadow-agent/10'
                           : hovered
                           ? 'ring-1 ring-agent/30 border-agent-dim/30'
+                          : editingSectionId === section.id
+                          ? 'ring-2 ring-brand/40 border-brand/40'
                           : stub
                           ? 'border-dashed border-slate-300'
                           : 'border-border-subtle'
@@ -477,49 +581,87 @@ function BUDraftView({
                           {idx + 1}
                         </span>
                         <h3 className="text-sm font-semibold text-slate-700">{section.title}</h3>
-                        {stub && !typing_ && !hovered && (
-                          <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full font-medium ml-auto shrink-0">
-                            pending
-                          </span>
-                        )}
-                        {hovered && !typing_ && (
-                          <motion.span
-                            initial={{ opacity: 0, x: 4 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="text-[10px] text-agent bg-agent-subtle border border-agent-dim/30 px-1.5 py-0.5 rounded-full font-medium ml-auto shrink-0"
-                          >
-                            ← will insert here
-                          </motion.span>
-                        )}
-                        {typing_ && (
-                          <motion.span
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="text-[10px] text-agent bg-agent-subtle border border-agent-dim/30 px-1.5 py-0.5 rounded-full font-medium ml-auto shrink-0 flex items-center gap-1"
-                          >
+                        <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                          {stub && !typing_ && !hovered && editingSectionId !== section.id && (
+                            <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full font-medium">
+                              pending
+                            </span>
+                          )}
+                          {hovered && !typing_ && (
                             <motion.span
-                              animate={{ opacity: [1, 0.3, 1] }}
-                              transition={{ duration: 0.6, repeat: Infinity }}
-                              className="w-1.5 h-1.5 rounded-full bg-agent"
-                            />
-                            Writing…
-                          </motion.span>
-                        )}
+                              initial={{ opacity: 0, x: 4 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              className="text-[10px] text-agent bg-agent-subtle border border-agent-dim/30 px-1.5 py-0.5 rounded-full font-medium"
+                            >
+                              ← will insert here
+                            </motion.span>
+                          )}
+                          {typing_ && (
+                            <motion.span
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="text-[10px] text-agent bg-agent-subtle border border-agent-dim/30 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1"
+                            >
+                              <motion.span
+                                animate={{ opacity: [1, 0.3, 1] }}
+                                transition={{ duration: 0.6, repeat: Infinity }}
+                                className="w-1.5 h-1.5 rounded-full bg-agent"
+                              />
+                              Writing…
+                            </motion.span>
+                          )}
+                          {!typing_ && editingSectionId !== section.id && (
+                            <button
+                              onClick={() => { setEditingSectionId(section.id); setEditBody(displayBody) }}
+                              title="Edit manually"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-slate-600 p-0.5 rounded"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <p className={`text-sm leading-relaxed pl-7 ${
-                        stub && !typing_ ? 'text-slate-400 italic' : 'text-slate-600'
-                      }`}>
-                        {displayBody}
-                        {typing_ && (
-                          <motion.span
-                            animate={{ opacity: [1, 0] }}
-                            transition={{ duration: 0.5, repeat: Infinity, ease: 'linear' }}
-                            className="text-agent font-medium"
-                          >
-                            ▌
-                          </motion.span>
-                        )}
-                      </p>
+                      {editingSectionId === section.id ? (
+                        <div className="pl-7 space-y-1.5">
+                          <textarea
+                            value={editBody}
+                            onChange={(e) => setEditBody(e.target.value)}
+                            autoFocus
+                            rows={4}
+                            className="w-full border border-brand/30 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand/30 bg-ink resize-none leading-relaxed"
+                          />
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => setEditingSectionId(null)}
+                              className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => saveDraftEdit(section.id, editBody)}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-white bg-brand hover:bg-brand-dim px-2.5 py-1 rounded-md transition-colors"
+                            >
+                              <Check className="w-3 h-3" />
+                              Done
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className={`text-sm leading-relaxed pl-7 ${
+                          stub && !typing_ ? 'text-slate-400 italic' : 'text-slate-600'
+                        }`}>
+                          {displayBody}
+                          {typing_ && (
+                            <motion.span
+                              animate={{ opacity: [1, 0] }}
+                              transition={{ duration: 0.5, repeat: Infinity, ease: 'linear' }}
+                              className="text-agent font-medium"
+                            >
+                              ▌
+                            </motion.span>
+                          )}
+                        </p>
+                      )}
                     </motion.div>
                   )
                 })}
@@ -549,6 +691,7 @@ function BUDraftView({
               business_need: reco.businessNeed.slice(0, 80) + '…',
             }}
             onComplete={handleComplete}
+            onSourceClick={setOpenPrecedentId}
           />
 
           {/* Assisted-drafting panel — appears after agent produces the template */}
@@ -888,7 +1031,7 @@ function BUFeedbackView({
                       </div>
                       <div className={`flex items-center gap-1.5 text-sm font-medium ${cls}`}>
                         {review.status === 'Approved' && <CheckCircle2 className="w-4 h-4" />}
-                        {review.status === 'Returned' && <XCircle className="w-4 h-4" />}
+                        {review.status === 'Returned' && <RotateCcw className="w-4 h-4" />}
                         {review.status}
                       </div>
                     </div>
@@ -1115,6 +1258,9 @@ function BUUpdateView({
   const [typing, setTyping] = useState<{ sectionId: string; displayText: string } | null>(null)
   const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [showFullComment, setShowFullComment] = useState(false)
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
+  const [editBody, setEditBody] = useState('')
+  const [activeRef, setActiveRef] = useState<string | null>(null)
 
   const totalComments = LEGAL_COMMENTS.length
   const resolvedCount = resolvedIds.size
@@ -1165,6 +1311,16 @@ function BUUpdateView({
     setTyping(null)
   }, [reco, resolvedIds, recoId, updateContent])
 
+  const saveUpdateEdit = useCallback((sectionId: string, body: string) => {
+    if (!reco) return
+    updateContent(recoId, {
+      contentSections: reco.contentSections.map((s) =>
+        s.id === sectionId ? { ...s, body } : s
+      ),
+    })
+    setEditingSectionId(null)
+  }, [reco, recoId, updateContent])
+
   const handleAccept = () => {
     acceptFeedbackChanges(recoId)
     onResubmit()
@@ -1201,7 +1357,7 @@ function BUUpdateView({
       {returnedComment && returnedFn && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <XCircle className="w-4 h-4 text-amber-500" />
+            <RotateCcw className="w-4 h-4 text-amber-500" />
             <span className="text-sm font-semibold text-amber-700">
               {FN_LABELS[returnedFn]} Review — Returned
             </span>
@@ -1222,6 +1378,18 @@ function BUUpdateView({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ── Document ────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-3">
+          {reco.regulatoryRefs.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {reco.regulatoryRefs.map((ref) => (
+                <RegulatoryRefBadge
+                  key={ref}
+                  refKey={ref}
+                  isOpen={activeRef === ref}
+                  onToggle={() => setActiveRef(activeRef === ref ? null : ref)}
+                />
+              ))}
+            </div>
+          )}
           {reco.contentSections.map((section, idx) => {
             const isTarget = LEGAL_TARGET_IDS.has(section.id)
             const typing_ = isTypingSection(section.id)
@@ -1233,11 +1401,13 @@ function BUUpdateView({
               <motion.div
                 key={section.id}
                 layout
-                className={`bg-surface rounded-xl p-4 border transition-all duration-200 ${
+                className={`group bg-surface rounded-xl p-4 border transition-all duration-200 ${
                   typing_
                     ? 'ring-2 ring-agent/60 border-agent-dim/50 shadow-sm shadow-agent/10'
                     : hovered
                     ? 'ring-1 ring-agent/30 border-agent-dim/30'
+                    : editingSectionId === section.id
+                    ? 'ring-2 ring-brand/40 border-brand/40'
                     : resolved && isTarget
                     ? 'border-emerald-300 bg-emerald-50/30'
                     : 'border-border-subtle'
@@ -1248,52 +1418,90 @@ function BUUpdateView({
                     {idx + 1}
                   </span>
                   <h3 className="text-sm font-semibold text-slate-700">{section.title}</h3>
-                  {hovered && !typing_ && (
-                    <motion.span
-                      initial={{ opacity: 0, x: 4 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="text-[10px] text-agent bg-agent-subtle border border-agent-dim/30 px-1.5 py-0.5 rounded-full font-medium ml-auto shrink-0"
-                    >
-                      ← will insert here
-                    </motion.span>
-                  )}
-                  {typing_ && (
-                    <motion.span
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="text-[10px] text-agent bg-agent-subtle border border-agent-dim/30 px-1.5 py-0.5 rounded-full font-medium ml-auto shrink-0 flex items-center gap-1"
-                    >
+                  <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                    {hovered && !typing_ && (
                       <motion.span
-                        animate={{ opacity: [1, 0.3, 1] }}
-                        transition={{ duration: 0.6, repeat: Infinity }}
-                        className="w-1.5 h-1.5 rounded-full bg-agent"
-                      />
-                      Writing…
-                    </motion.span>
-                  )}
-                  {resolved && !typing_ && !hovered && isTarget && (
-                    <motion.span
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="text-[10px] text-emerald-700 bg-emerald-100 border border-emerald-300 px-1.5 py-0.5 rounded-full font-medium ml-auto shrink-0 flex items-center gap-1"
-                    >
-                      <Check className="w-2.5 h-2.5" />
-                      Updated
-                    </motion.span>
-                  )}
+                        initial={{ opacity: 0, x: 4 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="text-[10px] text-agent bg-agent-subtle border border-agent-dim/30 px-1.5 py-0.5 rounded-full font-medium"
+                      >
+                        ← will insert here
+                      </motion.span>
+                    )}
+                    {typing_ && (
+                      <motion.span
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-[10px] text-agent bg-agent-subtle border border-agent-dim/30 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1"
+                      >
+                        <motion.span
+                          animate={{ opacity: [1, 0.3, 1] }}
+                          transition={{ duration: 0.6, repeat: Infinity }}
+                          className="w-1.5 h-1.5 rounded-full bg-agent"
+                        />
+                        Writing…
+                      </motion.span>
+                    )}
+                    {resolved && !typing_ && !hovered && isTarget && editingSectionId !== section.id && (
+                      <motion.span
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-[10px] text-emerald-700 bg-emerald-100 border border-emerald-300 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1"
+                      >
+                        <Check className="w-2.5 h-2.5" />
+                        Updated
+                      </motion.span>
+                    )}
+                    {!typing_ && editingSectionId !== section.id && (
+                      <button
+                        onClick={() => { setEditingSectionId(section.id); setEditBody(displayBody) }}
+                        title="Edit manually"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-slate-600 p-0.5 rounded"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <p className="text-sm leading-relaxed pl-7 text-slate-600">
-                  {displayBody}
-                  {typing_ && (
-                    <motion.span
-                      animate={{ opacity: [1, 0] }}
-                      transition={{ duration: 0.5, repeat: Infinity, ease: 'linear' }}
-                      className="text-agent font-medium"
-                    >
-                      ▌
-                    </motion.span>
-                  )}
-                </p>
+                {editingSectionId === section.id ? (
+                  <div className="pl-7 space-y-1.5">
+                    <textarea
+                      value={editBody}
+                      onChange={(e) => setEditBody(e.target.value)}
+                      autoFocus
+                      rows={4}
+                      className="w-full border border-brand/30 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand/30 bg-ink resize-none leading-relaxed"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setEditingSectionId(null)}
+                        className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => saveUpdateEdit(section.id, editBody)}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-white bg-brand hover:bg-brand-dim px-2.5 py-1 rounded-md transition-colors"
+                      >
+                        <Check className="w-3 h-3" />
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm leading-relaxed pl-7 text-slate-600">
+                    {displayBody}
+                    {typing_ && (
+                      <motion.span
+                        animate={{ opacity: [1, 0] }}
+                        transition={{ duration: 0.5, repeat: Infinity, ease: 'linear' }}
+                        className="text-agent font-medium"
+                      >
+                        ▌
+                      </motion.span>
+                    )}
+                  </p>
+                )}
               </motion.div>
             )
           })}

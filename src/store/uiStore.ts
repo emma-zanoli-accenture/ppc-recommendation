@@ -73,6 +73,10 @@ interface UIStore {
   // Increments on every full reset — used as key in App.tsx to remount persona components
   resetKey: number
   resetUI: () => void
+  kbOpen: boolean
+  setKbOpen: (v: boolean) => void
+  openPrecedentId: string | null
+  setOpenPrecedentId: (id: string | null) => void
 }
 
 export const useUIStore = create<UIStore>((set, get) => ({
@@ -89,7 +93,13 @@ export const useUIStore = create<UIStore>((set, get) => ({
   retreatDemoStep: () => set((s) => ({ demoStep: Math.max(s.demoStep - 1, 0) })),
 
   resetKey: 0,
-  resetUI: () => set((s) => ({ resetKey: s.resetKey + 1, demoStep: 0, persona: 'bu', demoGuideOpen: true })),
+  resetUI: () => set((s) => ({ resetKey: s.resetKey + 1, demoStep: 0, persona: 'bu', demoGuideOpen: true, kbOpen: false, openPrecedentId: null })),
+
+  kbOpen: false,
+  setKbOpen: (v) => set({ kbOpen: v }),
+
+  openPrecedentId: null,
+  setOpenPrecedentId: (id) => set({ openPrecedentId: id }),
 }))
 
 // Sync persona with the current demo step's persona suggestion
