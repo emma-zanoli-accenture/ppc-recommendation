@@ -994,9 +994,28 @@ function BUUpdateView({
   )
 
   const SUGGESTED_BODY =
-    'Estimated annual contract value: EUR 32.5M, confirmed by Finance/Treasury (budget clearance obtained 7 June 2026). Primary financial risks: EUR/RON FX basis (~2.3%), mitigated via forward hedging programme approved by Treasury. Interconnector capacity curtailment and counterparty credit risk (CEO S.A., rated Fitch BB+) are within PPC risk appetite. A credit support annex will be executed alongside the master agreement.'
+    'Estimated annual contract value: EUR 32.5M — Finance/Treasury budget clearance formally confirmed 7 June 2026 (satisfies Legal review hard gate per internal policy). EUR/RON FX basis risk (~2.3%) mitigated via Treasury-approved forward hedging programme. Counterparty credit risk: CEO S.A. rated Fitch BB+, within PPC risk appetite; credit support annex to be executed alongside master agreement. REMIT Art. 4 ACER pre-trade notification filed 5 June 2026; written acknowledgement received and on file with Regulatory Affairs — condition precedent to contract signature is met.'
 
   const [financialBody, setFinancialBody] = useState(financialSection?.body ?? '')
+  const [typing, setTyping] = useState<string | null>(null)
+  const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const applyUpdate = () => {
+    if (typingTimerRef.current) clearInterval(typingTimerRef.current)
+    let pos = TW_CHARS
+    setTyping(SUGGESTED_BODY.slice(0, pos))
+    typingTimerRef.current = setInterval(() => {
+      pos += TW_CHARS
+      if (pos >= SUGGESTED_BODY.length) {
+        clearInterval(typingTimerRef.current!)
+        typingTimerRef.current = null
+        setFinancialBody(SUGGESTED_BODY)
+        setTyping(null)
+      } else {
+        setTyping(SUGGESTED_BODY.slice(0, pos))
+      }
+    }, TW_MS)
+  }
 
   if (!reco) return null
 
@@ -1043,35 +1062,75 @@ function BUUpdateView({
 
       {/* Edit section */}
       {financialSection && (
-        <div className="bg-surface border border-border-subtle rounded-xl p-5 space-y-3">
+        <div className={`bg-surface border rounded-xl p-5 space-y-3 transition-all duration-200 ${
+          typing !== null
+            ? 'ring-2 ring-agent/60 border-agent-dim/50 shadow-sm shadow-agent/10'
+            : 'border-border-subtle'
+        }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-500" />
               <p className="text-sm font-semibold text-slate-700">{financialSection.title}</p>
+              <AnimatePresence>
+                {typing !== null && (
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="text-[10px] text-agent bg-agent-subtle border border-agent-dim/30 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1"
+                  >
+                    <motion.span
+                      animate={{ opacity: [1, 0.3, 1] }}
+                      transition={{ duration: 0.6, repeat: Infinity }}
+                      className="w-1.5 h-1.5 rounded-full bg-agent"
+                    />
+                    Writing…
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </div>
-            <button
-              onClick={() => setFinancialBody(SUGGESTED_BODY)}
-              className="text-xs text-agent font-medium hover:text-agent-dim transition-colors"
-            >
-              Apply suggested update ↗
-            </button>
+            {typing === null && (
+              <button
+                onClick={applyUpdate}
+                className="text-xs text-agent font-medium hover:text-agent-dim transition-colors"
+              >
+                Apply suggested update ↗
+              </button>
+            )}
           </div>
           <p className="text-xs text-slate-500">
             Update to address the reviewer's comments before resubmitting.
           </p>
-          <textarea
-            value={financialBody}
-            onChange={(e) => setFinancialBody(e.target.value)}
-            rows={5}
-            className="w-full border border-border-strong rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand bg-ink resize-none leading-relaxed"
-          />
+          <div className="relative">
+            <textarea
+              value={typing ?? financialBody}
+              onChange={(e) => { if (typing === null) setFinancialBody(e.target.value) }}
+              readOnly={typing !== null}
+              rows={5}
+              className={`w-full border rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none bg-ink resize-none leading-relaxed transition-all duration-200 ${
+                typing !== null
+                  ? 'border-agent-dim/50 text-slate-700'
+                  : 'border-border-strong focus:ring-2 focus:ring-brand/30 focus:border-brand'
+              }`}
+            />
+            {typing !== null && (
+              <motion.span
+                animate={{ opacity: [1, 0] }}
+                transition={{ duration: 0.5, repeat: Infinity, ease: 'linear' }}
+                className="absolute bottom-3 right-3 text-agent font-medium text-sm pointer-events-none"
+              >
+                ▌
+              </motion.span>
+            )}
+          </div>
         </div>
       )}
 
       <div className="flex justify-end">
         <button
           onClick={handleResubmit}
-          className="bg-brand text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-dim transition-colors inline-flex items-center gap-1.5"
+          disabled={typing !== null}
+          className="bg-brand text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-dim transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
         >
           Save & Resubmit for Review
           <ChevronRight className="w-4 h-4" />
