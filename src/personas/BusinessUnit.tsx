@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
@@ -9,6 +9,9 @@ import {
   MessageSquare,
   Send,
   Sparkles,
+  Bot,
+  Check,
+  Zap,
 } from 'lucide-react'
 import { useRecoStore } from '@/store'
 import AgentPanel from '@/components/AgentPanel'
@@ -18,7 +21,7 @@ import Timeline from '@/components/Timeline'
 import { draftingAgentScript } from '@/agents/scripts'
 import { statusColors } from '@/lib/statusColors'
 import type { ReviewFunction, Recommendation, RecommendationStatus } from '@/lib/types'
-import type { DraftingOutput } from '@/agents/scripts/drafting'
+import type { DraftingOutput, DraftSuggestion } from '@/agents/scripts/drafting'
 
 // ─── Types & constants ────────────────────────────────────────────────────────
 
@@ -218,6 +221,80 @@ function BUCreate({ onBack, onCreate }: { onBack: () => void; onCreate: (id: str
 
 // ─── Draft view ───────────────────────────────────────────────────────────────
 
+const SCRIPT_OUTPUT = draftingAgentScript.structuredOutput as DraftingOutput
+const TEMPLATE_MAP = new Map(SCRIPT_OUTPUT.templateSections.map((s) => [s.id, s.body]))
+const SECTION_TITLE_MAP = new Map(SCRIPT_OUTPUT.templateSections.map((s) => [s.id, s.title]))
+const ALL_DRAFT_ITEMS = [...SCRIPT_OUTPUT.suggestions, ...SCRIPT_OUTPUT.gaps]
+
+// Typewriter speed: ~280 chars/sec feels like live writing without being tedious
+const TW_CHARS = 7
+const TW_MS = 25
+
+function SuggestionCard({
+  item,
+  applied,
+  onApply,
+  onHoverStart,
+  onHoverEnd,
+}: {
+  item: DraftSuggestion
+  applied: boolean
+  onApply: () => void
+  onHoverStart: () => void
+  onHoverEnd: () => void
+}) {
+  const isSuggestion = item.type === 'suggestion'
+  const sectionTitle = SECTION_TITLE_MAP.get(item.targetSectionId)
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`flex items-start gap-2.5 p-3 rounded-lg border transition-all ${
+        applied
+          ? 'bg-surface-raised border-border-subtle opacity-60'
+          : isSuggestion
+          ? 'bg-agent-subtle/40 border-agent-dim/30'
+          : 'bg-amber-50 border-amber-200'
+      }`}
+    >
+      <div className={`mt-0.5 flex-shrink-0 ${isSuggestion ? 'text-agent' : 'text-amber-500'}`}>
+        {isSuggestion ? <Bot className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={`text-xs font-medium leading-snug ${
+          applied ? 'text-slate-400' : isSuggestion ? 'text-agent' : 'text-amber-700'
+        }`}>
+          {item.label}
+        </p>
+        {sectionTitle && !applied && (
+          <p className="text-[10px] text-slate-400 mt-0.5">→ {sectionTitle}</p>
+        )}
+        {applied && (
+          <p className="text-[10px] text-emerald-600 mt-0.5 flex items-center gap-1">
+            <Check className="w-2.5 h-2.5" />
+            Applied
+          </p>
+        )}
+      </div>
+      {!applied && (
+        <button
+          onClick={onApply}
+          onMouseEnter={onHoverStart}
+          onMouseLeave={onHoverEnd}
+          className={`text-[10px] font-bold px-2.5 py-1 rounded-md transition-colors shrink-0 ${
+            isSuggestion
+              ? 'bg-agent text-white hover:bg-agent-dim'
+              : 'bg-amber-500 text-white hover:bg-amber-600'
+          }`}
+        >
+          Apply
+        </button>
+      )}
+    </motion.div>
+  )
+}
+
 function BUDraftView({
   recoId,
   onBack,
@@ -229,18 +306,101 @@ function BUDraftView({
 }) {
   const reco = useRecoStore((s) => s.recommendations.find((r) => r.id === recoId))
   const applyDraftingOutput = useRecoStore((s) => s.applyDraftingOutput)
+  const updateContent = useRecoStore((s) => s.updateContent)
+
+  // Pre-populate appliedIds on mount by comparing section bodies to template stubs
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(() => {
+    const sections =
+      useRecoStore.getState().recommendations.find((r) => r.id === recoId)?.contentSections ?? []
+    const applied = new Set<string>()
+    for (const item of ALL_DRAFT_ITEMS) {
+      const current = sections.find((s) => s.id === item.targetSectionId)?.body
+      const stub = TEMPLATE_MAP.get(item.targetSectionId)
+      if (current && stub && current !== stub) applied.add(item.id)
+    }
+    return applied
+  })
+  // sectionId being typed into (hover preview) or actively typing
+  const [hoverSectionId, setHoverSectionId] = useState<string | null>(null)
+  // typewriter: live display text while a section is being written in
+  const [typing, setTyping] = useState<{ sectionId: string; displayText: string } | null>(null)
+  const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const totalItems = ALL_DRAFT_ITEMS.length
+  const appliedCount = appliedIds.size
+  const allApplied = appliedCount === totalItems
 
   const handleComplete = useCallback(
     (output: unknown) => {
-      if (output) applyDraftingOutput(recoId, output as DraftingOutput)
+      if (!output) return
+      const o = output as DraftingOutput
+      applyDraftingOutput(recoId, {
+        contentSections: o.templateSections,
+        draftResolution: o.draftResolution,
+        regulatoryRefs: o.regulatoryRefs,
+      })
     },
     [recoId, applyDraftingOutput]
   )
 
+  const applyItem = useCallback(
+    (item: DraftSuggestion) => {
+      if (appliedIds.has(item.id) || !reco) return
+      // Update store immediately (source of truth)
+      updateContent(recoId, {
+        contentSections: reco.contentSections.map((s) =>
+          s.id === item.targetSectionId ? { ...s, body: item.body } : s
+        ),
+      })
+      setAppliedIds((prev) => new Set([...prev, item.id]))
+      setHoverSectionId(null)
+
+      // Typewriter: stream the text into the section visually
+      if (typingTimerRef.current) clearInterval(typingTimerRef.current)
+      let pos = TW_CHARS
+      setTyping({ sectionId: item.targetSectionId, displayText: item.body.slice(0, pos) })
+      typingTimerRef.current = setInterval(() => {
+        pos += TW_CHARS
+        if (pos >= item.body.length) {
+          clearInterval(typingTimerRef.current!)
+          typingTimerRef.current = null
+          setTyping(null)
+        } else {
+          setTyping({ sectionId: item.targetSectionId, displayText: item.body.slice(0, pos) })
+        }
+      }, TW_MS)
+    },
+    [reco, appliedIds, recoId, updateContent]
+  )
+
+  const applyAll = useCallback(() => {
+    if (!reco) return
+    const remaining = ALL_DRAFT_ITEMS.filter((item) => !appliedIds.has(item.id))
+    if (remaining.length === 0) return
+    // Single store update with all pending changes
+    const finalSections = reco.contentSections.map((section) => {
+      const match = remaining.find((item) => item.targetSectionId === section.id)
+      return match ? { ...section, body: match.body } : section
+    })
+    updateContent(recoId, { contentSections: finalSections })
+    // Stagger applied badges; no typewriter for bulk (too many at once)
+    remaining.forEach((item, i) => {
+      setTimeout(() => {
+        setAppliedIds((prev) => new Set([...prev, item.id]))
+      }, i * 140)
+    })
+    setHoverSectionId(null)
+    if (typingTimerRef.current) { clearInterval(typingTimerRef.current); typingTimerRef.current = null }
+    setTyping(null)
+  }, [reco, appliedIds, recoId, updateContent])
+
   if (!reco) return null
 
   const hasSections = reco.contentSections.length > 0
-  const gaps = (draftingAgentScript.structuredOutput as DraftingOutput | undefined)?.gaps ?? []
+  const isStub = (sectionId: string) =>
+    ALL_DRAFT_ITEMS.some((item) => item.targetSectionId === sectionId && !appliedIds.has(item.id))
+  const isTyping = (sectionId: string) => typing?.sectionId === sectionId
+  const isHovered = (sectionId: string) => hoverSectionId === sectionId
 
   return (
     <div className="space-y-6">
@@ -259,13 +419,11 @@ function BUDraftView({
 
       <div>
         <h1 className="text-2xl font-semibold text-slate-800">{reco.title}</h1>
-        <p className="text-slate-500 text-sm mt-1">
-          {reco.businessUnit} · {reco.owner}
-        </p>
+        <p className="text-slate-500 text-sm mt-1">{reco.businessUnit} · {reco.owner}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Content sections */}
+        {/* ── Document ────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-4">
           {!hasSections ? (
             <div className="bg-surface border border-dashed border-border-strong rounded-xl p-10 text-center space-y-2">
@@ -278,21 +436,6 @@ function BUDraftView({
             </div>
           ) : (
             <>
-              {/* Gap alert */}
-              {gaps.length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-                  <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-amber-700 mb-1">Gap detected by Drafting Agent</p>
-                    {gaps.map((g, i) => (
-                      <p key={i} className="text-sm text-amber-600">
-                        {g}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Regulatory refs */}
               {reco.regulatoryRefs.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
@@ -309,17 +452,77 @@ function BUDraftView({
 
               {/* Content sections */}
               <div className="space-y-3">
-                {reco.contentSections.map((section, idx) => (
-                  <div key={section.id} className="bg-surface border border-border-subtle rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="w-5 h-5 rounded-full bg-surface-raised text-[10px] font-bold text-slate-500 flex items-center justify-center flex-shrink-0">
-                        {idx + 1}
-                      </span>
-                      <h3 className="text-sm font-semibold text-slate-700">{section.title}</h3>
-                    </div>
-                    <p className="text-sm text-slate-600 leading-relaxed pl-7">{section.body}</p>
-                  </div>
-                ))}
+                {reco.contentSections.map((section, idx) => {
+                  const stub = isStub(section.id)
+                  const typing_ = isTyping(section.id)
+                  const hovered = isHovered(section.id)
+                  // What to display: live typewriter text > store body
+                  const displayBody = typing_ && typing ? typing.displayText : section.body
+                  return (
+                    <motion.div
+                      key={section.id}
+                      layout
+                      className={`bg-surface rounded-xl p-4 transition-all duration-200 border ${
+                        typing_
+                          ? 'ring-2 ring-agent/60 border-agent-dim/50 shadow-sm shadow-agent/10'
+                          : hovered
+                          ? 'ring-1 ring-agent/30 border-agent-dim/30'
+                          : stub
+                          ? 'border-dashed border-slate-300'
+                          : 'border-border-subtle'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-5 h-5 rounded-full bg-surface-raised text-[10px] font-bold text-slate-500 flex items-center justify-center flex-shrink-0">
+                          {idx + 1}
+                        </span>
+                        <h3 className="text-sm font-semibold text-slate-700">{section.title}</h3>
+                        {stub && !typing_ && !hovered && (
+                          <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full font-medium ml-auto shrink-0">
+                            pending
+                          </span>
+                        )}
+                        {hovered && !typing_ && (
+                          <motion.span
+                            initial={{ opacity: 0, x: 4 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="text-[10px] text-agent bg-agent-subtle border border-agent-dim/30 px-1.5 py-0.5 rounded-full font-medium ml-auto shrink-0"
+                          >
+                            ← will insert here
+                          </motion.span>
+                        )}
+                        {typing_ && (
+                          <motion.span
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="text-[10px] text-agent bg-agent-subtle border border-agent-dim/30 px-1.5 py-0.5 rounded-full font-medium ml-auto shrink-0 flex items-center gap-1"
+                          >
+                            <motion.span
+                              animate={{ opacity: [1, 0.3, 1] }}
+                              transition={{ duration: 0.6, repeat: Infinity }}
+                              className="w-1.5 h-1.5 rounded-full bg-agent"
+                            />
+                            Writing…
+                          </motion.span>
+                        )}
+                      </div>
+                      <p className={`text-sm leading-relaxed pl-7 ${
+                        stub && !typing_ ? 'text-slate-400 italic' : 'text-slate-600'
+                      }`}>
+                        {displayBody}
+                        {typing_ && (
+                          <motion.span
+                            animate={{ opacity: [1, 0] }}
+                            transition={{ duration: 0.5, repeat: Infinity, ease: 'linear' }}
+                            className="text-agent font-medium"
+                          >
+                            ▌
+                          </motion.span>
+                        )}
+                      </p>
+                    </motion.div>
+                  )
+                })}
               </div>
 
               {/* Draft resolution */}
@@ -335,8 +538,8 @@ function BUDraftView({
           )}
         </div>
 
-        {/* Agent panel */}
-        <div className="space-y-3">
+        {/* ── Right column: Agent + Assisted drafting ──────────────── */}
+        <div className="space-y-4">
           <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Drafting Agent</h2>
           <AgentPanel
             script={draftingAgentScript}
@@ -347,20 +550,127 @@ function BUDraftView({
             }}
             onComplete={handleComplete}
           />
+
+          {/* Assisted-drafting panel — appears after agent produces the template */}
+          <AnimatePresence>
+            {hasSections && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25 }}
+                className="border border-border-subtle rounded-xl overflow-hidden bg-surface"
+              >
+                {/* Panel header */}
+                <div className="px-4 py-3 bg-surface-raised border-b border-border-subtle flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5 text-agent" />
+                  <p className="text-xs font-semibold text-slate-700">Assisted Drafting</p>
+                  <span className="ml-auto text-[10px] text-slate-400">
+                    {appliedCount}/{totalItems} applied
+                  </span>
+                </div>
+
+                <div className="p-4 space-y-4">
+                  {/* Progress bar */}
+                  <div className="space-y-1.5">
+                    <div className="h-1.5 bg-surface-raised rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-agent rounded-full"
+                        animate={{ width: `${totalItems > 0 ? (appliedCount / totalItems) * 100 : 0}%` }}
+                        transition={{ duration: 0.4, ease: 'easeOut' }}
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      {allApplied
+                        ? 'All suggestions applied — draft complete'
+                        : `${appliedCount} of ${totalItems} applied · ${totalItems - appliedCount} remaining`}
+                    </p>
+                  </div>
+
+                  {/* Suggested integrations */}
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
+                      Suggested integrations
+                    </p>
+                    {SCRIPT_OUTPUT.suggestions.map((item) => (
+                      <SuggestionCard
+                        key={item.id}
+                        item={item}
+                        applied={appliedIds.has(item.id)}
+                        onApply={() => applyItem(item)}
+                        onHoverStart={() => setHoverSectionId(item.targetSectionId)}
+                        onHoverEnd={() => setHoverSectionId(null)}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Information gaps */}
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
+                      Information gaps
+                    </p>
+                    {SCRIPT_OUTPUT.gaps.map((item) => (
+                      <SuggestionCard
+                        key={item.id}
+                        item={item}
+                        applied={appliedIds.has(item.id)}
+                        onApply={() => applyItem(item)}
+                        onHoverStart={() => setHoverSectionId(item.targetSectionId)}
+                        onHoverEnd={() => setHoverSectionId(null)}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Apply all */}
+                  {!allApplied && (
+                    <button
+                      onClick={applyAll}
+                      className="w-full bg-agent text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-agent-dim transition-colors inline-flex items-center justify-center gap-1.5"
+                    >
+                      <Zap className="w-3 h-3" />
+                      Auto-complete draft
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Footer CTA — visible once sections are populated */}
+      {/* Footer CTA */}
       <AnimatePresence>
         {hasSections && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex justify-end pt-2 border-t border-border-subtle"
+            className="flex items-center justify-between pt-4 border-t border-border-subtle"
           >
+            <div>
+              <AnimatePresence mode="wait">
+                {allApplied ? (
+                  <motion.div
+                    key="complete"
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex items-center gap-1.5 text-sm font-medium text-emerald-700"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Draft complete — ready for review
+                  </motion.div>
+                ) : appliedCount > 0 ? (
+                  <motion.p key="partial" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-slate-500">
+                    {appliedCount} of {totalItems} suggestions applied · you can still send for review
+                  </motion.p>
+                ) : (
+                  <motion.p key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-slate-500">
+                    Apply suggestions to complete the document, or send for review now
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </div>
             <button
               onClick={onProceed}
-              className="bg-brand text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-dim transition-colors inline-flex items-center gap-1.5 mt-4"
+              className="bg-brand text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-dim transition-colors inline-flex items-center gap-1.5"
             >
               Send for Review
               <ChevronRight className="w-4 h-4" />
