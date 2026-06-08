@@ -9,9 +9,39 @@ const PERSONAS: { id: Persona; label: string; sublabel: string; icon: React.Elem
   { id: 'secretariat', label: 'Corporate', sublabel: 'Secretariat', icon: Crown },
 ]
 
+function Badge({ count }: { count: number }) {
+  if (count === 0) return null
+  return (
+    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-agent text-white text-[10px] font-bold flex items-center justify-center leading-none shadow-sm">
+      {count > 9 ? '9+' : count}
+    </span>
+  )
+}
+
 export default function TopBar() {
-  const { persona, setPersona, demoGuideOpen, toggleDemoGuide } = useUIStore()
+  const { persona, setPersona, demoGuideOpen, toggleDemoGuide, resetUI } = useUIStore()
+  const recommendations = useRecoStore((s) => s.recommendations)
   const resetDemo = useRecoStore((s) => s.resetDemo)
+
+  // Items needing action per persona
+  const buCount = recommendations.filter(
+    (r) => r.status === 'Returned for Update' && r.businessUnit === 'Procurement'
+  ).length
+  const reviewCount = recommendations.filter((r) => r.status === 'Under Review').length
+  const secretariatCount = recommendations.filter(
+    (r) => r.status === 'Submitted to Secretariat'
+  ).length
+
+  const badgeCounts: Record<Persona, number> = {
+    bu: buCount,
+    review: reviewCount,
+    secretariat: secretariatCount,
+  }
+
+  const handleReset = () => {
+    resetDemo()
+    resetUI()
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 h-16 bg-surface border-b border-border-subtle flex items-center px-4 gap-4 shadow-sm">
@@ -27,11 +57,12 @@ export default function TopBar() {
         <div className="inline-flex items-center bg-surface-raised rounded-xl p-1 gap-1 border border-border-subtle">
           {PERSONAS.map(({ id, label, sublabel, icon: Icon }) => {
             const active = persona === id
+            const badgeCount = badgeCounts[id]
             return (
               <button
                 key={id}
                 onClick={() => setPersona(id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
                   active
                     ? 'bg-brand text-white shadow-sm'
                     : 'text-slate-500 hover:text-slate-800 hover:bg-surface'
@@ -44,6 +75,7 @@ export default function TopBar() {
                     {sublabel}
                   </span>
                 </span>
+                <Badge count={badgeCount} />
               </button>
             )
           })}
@@ -66,7 +98,7 @@ export default function TopBar() {
         </button>
 
         <button
-          onClick={resetDemo}
+          onClick={handleReset}
           title="Reset Demo"
           className="flex items-center gap-1.5 text-xs font-medium text-slate-500 px-3 py-2 rounded-lg border border-border-subtle hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 transition-all"
         >

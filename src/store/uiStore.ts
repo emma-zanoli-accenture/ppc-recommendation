@@ -19,43 +19,43 @@ export const DEMO_STEPS: DemoStep[] = [
   {
     persona: 'bu',
     title: 'Step 1 — Create the recommendation',
-    hint: 'Click "New Recommendation". Use the "Use example" button to prefill the cross-border energy trading scenario — avoids live typing.',
-    switchHint: 'Stay on Business Unit',
+    hint: 'Click "+ New Recommendation". On the form, click "Use example" to pre-fill the cross-border energy trading scenario — avoids live typing. Then click "Create & Draft".',
+    switchHint: 'Next click: "Create & Draft"',
   },
   {
     persona: 'bu',
-    title: 'Step 2 — Draft with Recopilot',
-    hint: 'Click "Draft with Recopilot" to run the Drafting Agent. Watch it scaffold all 7 sections, regulatory references (REMIT, EMIR, ACER, RAAEY), and the mandatory draft resolution.',
-    switchHint: 'Stay on Business Unit',
+    title: 'Step 2 — Draft with the Drafting Agent',
+    hint: 'Click "Run Drafting Agent". Watch it scaffold 7 sections, regulatory refs (REMIT, EMIR, ACER, RAAEY), and the draft resolution. Open "Under the Hood" to show the IT audience the orchestration. Then click "Send for Review".',
+    switchHint: 'Next click: "Send for Review"',
   },
   {
     persona: 'bu',
     title: 'Step 3 — Send for review',
-    hint: 'Send to Legal, Finance, and Compliance. Then switch persona to see the review happen.',
+    hint: 'All three functions are pre-selected. Click "Send to 3 functions". Status moves to "Under Review". Switch persona to watch the reviews.',
     switchHint: '→ Switch to Legal / Finance / Compliance',
   },
   {
     persona: 'review',
     title: 'Step 4 — Specialist review',
-    hint: 'Each function runs their agent: Legal Review Agent (REMIT/EMIR criticalities), Finance Review Agent (budget, FX), Compliance Review Agent (policy checks). Each approves or returns.',
+    hint: 'Click the cross-border trading item (marked "New"). Run the Legal Review Agent — it flags REMIT/EMIR criticalities. Click "Return for Update". Then switch to Finance and Compliance tabs and click "Approve" on each.',
     switchHint: '→ Switch back to Business Unit',
   },
   {
     persona: 'bu',
-    title: 'Step 5 — Address feedback & submit',
-    hint: 'Address any returned items and resubmit. Once all reviews are complete, submit to the Corporate Secretariat.',
+    title: 'Step 5 — Address feedback & resubmit',
+    hint: 'Click the recommendation showing "Returned for Update". Click "Address Feedback". Click "Apply suggested update ↗" to pre-fill the corrected section. Click "Save & Resubmit for Review". Once all reviews complete, click "Submit to Secretariat".',
     switchHint: '→ Switch to Corporate Secretariat',
   },
   {
     persona: 'secretariat',
     title: 'Step 6 — Readiness check',
-    hint: 'Run the Readiness Agent: it scores completeness, flags residual gaps, and shows the BoD deadline countdown.',
-    switchHint: 'Stay on Corporate Secretariat',
+    hint: 'Find the cross-border trading item in "In pipeline". Click it, then click "Run Readiness Agent". The readiness score and completeness checklist populate. Note the BoD deadline countdown.',
+    switchHint: 'Next click: "Generate BoD Pack"',
   },
   {
     persona: 'secretariat',
-    title: 'Step 7 — Assemble BoD pack & submit',
-    hint: 'Generate the BoD pack (6 documents). Confirm the Chairman touchpoint if needed. Submit to the Board of Directors.',
+    title: 'Step 7 — BoD pack & submit',
+    hint: 'Click "Generate BoD Pack". Then click "Download PDF" to show the formatted pack on screen. Optionally click "Share with Chairman" to show the touchpoint. Finally click "Submit to BoD" to complete the demo.',
     switchHint: 'Demo complete ✓',
   },
 ]
@@ -70,6 +70,9 @@ interface UIStore {
   setDemoStep: (n: number) => void
   advanceDemoStep: () => void
   retreatDemoStep: () => void
+  // Increments on every full reset — used as key in App.tsx to remount persona components
+  resetKey: number
+  resetUI: () => void
 }
 
 export const useUIStore = create<UIStore>((set, get) => ({
@@ -84,6 +87,9 @@ export const useUIStore = create<UIStore>((set, get) => ({
   setDemoStep: (n) => set({ demoStep: n }),
   advanceDemoStep: () => set((s) => ({ demoStep: Math.min(s.demoStep + 1, DEMO_STEPS.length - 1) })),
   retreatDemoStep: () => set((s) => ({ demoStep: Math.max(s.demoStep - 1, 0) })),
+
+  resetKey: 0,
+  resetUI: () => set((s) => ({ resetKey: s.resetKey + 1, demoStep: 0, persona: 'bu', demoGuideOpen: true })),
 }))
 
 // Sync persona with the current demo step's persona suggestion

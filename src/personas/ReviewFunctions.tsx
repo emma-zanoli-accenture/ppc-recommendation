@@ -318,14 +318,14 @@ function RFDashboard({
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {displayed.map((r) => (
+            {displayed.map((r, i) => (
               <div key={r.id} className="relative">
                 {r.reviews[activeFn].status === 'In Review' && (
                   <span className="absolute -top-1.5 -right-1.5 z-10 bg-brand text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">
                     New
                   </span>
                 )}
-                <RecoCard recommendation={r} onClick={() => onView(r.id)} />
+                <RecoCard recommendation={r} onClick={() => onView(r.id)} index={i} />
               </div>
             ))}
           </div>

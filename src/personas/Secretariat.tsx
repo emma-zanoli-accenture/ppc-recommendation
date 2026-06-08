@@ -357,7 +357,7 @@ function SecDashboard({
   recommendations: Recommendation[]
   onView: (id: string) => void
 }) {
-  const [buFilter, setBuFilter] = useState('Procurement')
+  const [buFilter, setBuFilter] = useState('All BUs')
 
   const pipelineItems = recommendations.filter((r) => PIPELINE_STATUSES.includes(r.status))
   const awaitingItems = recommendations.filter((r) => r.status === 'All Reviews Completed')
@@ -458,8 +458,8 @@ function SecDashboard({
                 {label} ({items.length})
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {items.map((r) => (
-                  <RecoCard key={r.id} recommendation={r} onClick={() => onView(r.id)} />
+                {items.map((r, i) => (
+                  <RecoCard key={r.id} recommendation={r} onClick={() => onView(r.id)} index={i} />
                 ))}
               </div>
             </div>

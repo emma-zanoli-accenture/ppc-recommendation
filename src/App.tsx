@@ -8,15 +8,16 @@ import Secretariat from '@/personas/Secretariat'
 
 export default function App() {
   const persona = useUIStore((s) => s.persona)
+  const resetKey = useUIStore((s) => s.resetKey)
 
   return (
     <div className="min-h-screen bg-ink font-sans">
       <TopBar />
       <main className="pt-16 min-h-[calc(100vh-4rem)]">
         <AnimatePresence mode="wait">
-          {persona === 'bu' && <BusinessUnit key="bu" />}
-          {persona === 'review' && <ReviewFunctions key="review" />}
-          {persona === 'secretariat' && <Secretariat key="secretariat" />}
+          {persona === 'bu' && <BusinessUnit key={`bu-${resetKey}`} />}
+          {persona === 'review' && <ReviewFunctions key={`review-${resetKey}`} />}
+          {persona === 'secretariat' && <Secretariat key={`secretariat-${resetKey}`} />}
         </AnimatePresence>
       </main>
       <DemoGuide />

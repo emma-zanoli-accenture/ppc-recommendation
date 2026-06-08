@@ -113,11 +113,12 @@ function BUDashboard({
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[...buRecos].reverse().map((r) => (
+            {[...buRecos].reverse().map((r, i) => (
               <RecoCard
                 key={r.id}
                 recommendation={r}
                 onClick={() => onView(r.id, r.status)}
+                index={i}
               />
             ))}
           </div>

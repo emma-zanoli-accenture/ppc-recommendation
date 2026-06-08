@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import { daysUntil } from '@/lib/utils'
 import { statusColors } from '@/lib/statusColors'
 import StatusBadge from './StatusBadge'
@@ -7,6 +8,7 @@ import type { Recommendation } from '@/lib/types'
 interface Props {
   recommendation: Recommendation
   onClick?: () => void
+  index?: number
 }
 
 const REVIEW_LABELS = { legal: 'L', finance: 'F', compliance: 'C' }
@@ -30,11 +32,14 @@ function DeadlineChip({ dateStr }: { dateStr: string }) {
   )
 }
 
-export default function RecoCard({ recommendation: r, onClick }: Props) {
+export default function RecoCard({ recommendation: r, onClick, index = 0 }: Props) {
   const c = statusColors[r.status]
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.3) }}
       onClick={onClick}
       className={`bg-surface border border-border-subtle rounded-xl p-4 flex flex-col gap-3 transition-all duration-150 ${onClick ? 'cursor-pointer hover:border-brand/40 hover:shadow-md hover:-translate-y-0.5' : ''}`}
     >
@@ -71,6 +76,6 @@ export default function RecoCard({ recommendation: r, onClick }: Props) {
           <ReadinessMeter score={r.readinessScore} size="sm" />
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
