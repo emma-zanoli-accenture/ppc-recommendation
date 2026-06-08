@@ -84,6 +84,9 @@ export interface RecoStore {
   // BU re-submits after addressing review feedback
   resubmitForReview: (id: string) => void
 
+  // BU accepts all legal feedback changes → directly "All Reviews Completed"
+  acceptFeedbackChanges: (id: string) => void
+
   submitToSecretariat: (id: string) => void
 
   updateReadinessScore: (id: string, score: number) => void
@@ -311,6 +314,26 @@ export const useRecoStore = create<RecoStore>((set, get) => {
           actor: get().getById(id)?.owner ?? 'Unknown',
           role: get().getById(id)?.businessUnit ?? '',
           action: 'Resubmitted for review after update',
+        }
+      )
+    },
+
+    acceptFeedbackChanges: (id) => {
+      update(
+        id,
+        (r) => ({
+          ...r,
+          status: 'All Reviews Completed' as const,
+          reviews: {
+            ...r.reviews,
+            legal: { ...r.reviews.legal, status: 'Approved' as const },
+          },
+        }),
+        {
+          timestamp: now(),
+          actor: get().getById(id)?.owner ?? 'Unknown',
+          role: get().getById(id)?.businessUnit ?? '',
+          action: 'Legal feedback integrated — version accepted',
         }
       )
     },

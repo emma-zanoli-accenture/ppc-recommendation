@@ -1,9 +1,9 @@
-// Pinned to demo date for consistent relative times on stage
-const DEMO_NOW = new Date('2026-06-07T12:00:00Z')
+// Pinned to demo date for seed data; live events use real clock
+const DEMO_ANCHOR = new Date('2026-06-07T12:00:00Z')
 
 export function daysUntil(dateStr: string): number {
   const target = new Date(dateStr)
-  const today = new Date(DEMO_NOW)
+  const today = new Date(DEMO_ANCHOR)
   today.setHours(0, 0, 0, 0)
   target.setHours(0, 0, 0, 0)
   return Math.ceil((target.getTime() - today.getTime()) / 86400000)
@@ -11,7 +11,10 @@ export function daysUntil(dateStr: string): number {
 
 export function relativeTime(isoStr: string): string {
   const date = new Date(isoStr)
-  const diffMs = DEMO_NOW.getTime() - date.getTime()
+  // For seed data (before anchor): anchor gives correct "Xd ago" labels.
+  // For live events (after anchor): use real clock so they show seconds/minutes ago.
+  const now = Math.max(DEMO_ANCHOR.getTime(), Date.now())
+  const diffMs = now - date.getTime()
   const diffMins = Math.floor(diffMs / 60000)
   const diffHours = Math.floor(diffMs / 3600000)
   const diffDays = Math.floor(diffMs / 86400000)

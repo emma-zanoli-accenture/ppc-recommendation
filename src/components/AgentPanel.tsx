@@ -202,21 +202,42 @@ export default function AgentPanel({ script, inputs, onComplete, className = '' 
           <AgentBadge name={script.agentName} isRunning={isRunning} />
           <StatusPill phase={phase} />
         </div>
-        <button
-          onClick={() => setUnderHood((v) => !v)}
-          className={`flex items-center gap-1 text-xs transition-colors ${
-            underHood ? 'text-agent font-medium' : 'text-slate-400 hover:text-agent'
-          }`}
-        >
-          Under the Hood
-          <motion.span animate={{ rotate: underHood ? 180 : 0 }} transition={{ duration: 0.2 }}>
-            <ChevronDown className="w-3.5 h-3.5" />
-          </motion.span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Compact re-run when panel is collapsed in done state */}
+          {phase === 'done' && !underHood && (
+            <button
+              onClick={run}
+              title="Re-run agent"
+              className="text-slate-300 hover:text-slate-500 transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" />
+            </button>
+          )}
+          <button
+            onClick={() => setUnderHood((v) => !v)}
+            className={`flex items-center gap-1 text-xs transition-colors ${
+              underHood ? 'text-agent font-medium' : 'text-slate-400 hover:text-agent'
+            }`}
+          >
+            Under the Hood
+            <motion.span animate={{ rotate: underHood ? 180 : 0 }} transition={{ duration: 0.2 }}>
+              <ChevronDown className="w-3.5 h-3.5" />
+            </motion.span>
+          </button>
+        </div>
       </div>
 
-      {/* Body */}
-      <div className="p-4 space-y-3">
+      {/* Body — always visible while running; collapses when done and Under the Hood is off */}
+      <AnimatePresence initial={false}>
+        {(phase !== 'done' || underHood) && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            style={{ overflow: 'hidden' }}
+          >
+        <div className="p-4 space-y-3">
         {/* Thinking indicator with shimmer skeleton */}
         {phase === 'thinking' && <ThinkingShimmer />}
 
@@ -291,6 +312,9 @@ export default function AgentPanel({ script, inputs, onComplete, className = '' 
           )}
         </div>
       </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Under the Hood panel */}
       <AnimatePresence>
