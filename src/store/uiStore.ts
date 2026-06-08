@@ -42,8 +42,8 @@ export const DEMO_STEPS: DemoStep[] = [
   },
   {
     persona: 'bu',
-    title: 'Step 5 — Address feedback & resubmit',
-    hint: 'Click the recommendation showing "Returned for Update". Click "Address Feedback". Click "Apply suggested update ↗" to pre-fill the corrected section. Click "Save & Resubmit for Review". Once all reviews complete, click "Submit to Secretariat".',
+    title: 'Step 5 — Review feedback & accept',
+    hint: 'Click the recommendation showing "Returned for Update". Click "Review Feedback". Apply each of the 3 Legal comments with the "Apply" button — each updates the corresponding section. Once all resolved, click "Verify & accept version". Once all reviews complete, click "Submit to Secretariat".',
     switchHint: '→ Switch to Corporate Secretariat',
   },
   {
