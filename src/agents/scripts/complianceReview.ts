@@ -10,11 +10,12 @@ export const complianceReviewAgentScript: AgentScript = {
   agentId: 'compliance-review-agent',
   agentName: 'Compliance Review Agent',
   steps: [
-    'Checking PPC Group Trading Policy v4.2 — commercial thresholds',
+    'Reviewing section 5 (Implementation Method) — Group Policy Approval level and compliance',
+    'Checking PPC Group Trading Policy v4.2 — commercial thresholds and permitted instruments',
     'Reviewing Board Delegation of Authority matrix — bilateral trading',
+    'Reviewing section 8 (Counterparty) — AML/sanctions/anti-corruption findings',
     'Screening conflict of interest register',
     'Verifying ESG screening: counterparty environmental profile',
-    'Cross-checking Anti-Bribery & Corruption policy — third-party due diligence',
   ],
   result: `Compliance review complete. The agreement is consistent with PPC Group policies and the corporate governance framework.
 

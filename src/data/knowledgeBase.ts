@@ -243,6 +243,30 @@ export const PAST_RECOMMENDATIONS: PastRecommendation[] = [
       },
     ],
   },
+  {
+    id: 'pb-10',
+    title: 'Regenerative Agriculture & Carbon Farming — Just Transition Programme, Western Macedonia',
+    businessUnit: 'Corporate Social Responsibility',
+    date: '2026-05-12',
+    outcome: 'Approved',
+    regulatoryRefs: ['ESRS S3', 'L.4936/2022 (Just Transition)'],
+    summary:
+      'PPC S.A. sponsorship of a regenerative agriculture and carbon farming educational programme in Western Macedonia (Just Transition area) in partnership with Organosi Gi (AMKE). Programme covers 10 seminars, 400 farmers, and 3 pilot demonstration plots over 12 months. Approved under PPC\'s Just Transition commitments pursuant to L.4936/2022. Budget: EUR 64,280 (maximum), disbursed in 3 tranches tied to delivery milestones. This recommendation is the first full 11-section PPC εισήγηση format example on file; it demonstrates the complete section structure, quantified KPIs, tranche payment schedule, and 5-tier signature block.',
+    resolution:
+      'The Board approved the regenerative agriculture and carbon farming educational initiative in Western Macedonia with a maximum budget of EUR 64,280 (3 payment tranches tied to deliverables) and authorised the Director of Corporate Social Responsibility to execute the service agreement with Organosi Gi (AMKE). Tranche 1 (EUR 20,000): upon contract signature and programme launch confirmation. Tranche 2 (EUR 28,000): upon completion of seminars 1–7 and submission of progress report. Tranche 3 (EUR 16,280): upon completion of all 10 seminars and delivery of final impact assessment (covering participating farmer numbers, carbon sequestration estimates, and ESRS S3 reporting inputs).',
+    snippets: [
+      {
+        id: 'pb-10-s1',
+        label: 'Tranche payment clause',
+        text: 'Payment shall be disbursed in three tranches: Tranche 1 (EUR 20,000) upon contract signature and written confirmation of programme launch by Organosi Gi; Tranche 2 (EUR 28,000) upon completion of seminars 1–7 and submission of a progress report approved by the CSR Director; Tranche 3 (EUR 16,280) upon completion of all 10 seminars and delivery of the final impact assessment. No tranche shall be released unless the preceding deliverable has been formally accepted. Unused budget lapses and may not be carried forward without a separate BoD resolution.',
+      },
+      {
+        id: 'pb-10-s2',
+        label: 'KPI and monitoring clause',
+        text: 'The following KPIs shall be tracked and reported quarterly to the CSR Director and annually to the BoD: (i) number of participating farmers (target: ≥400 over programme duration); (ii) number of seminars delivered (target: 10); (iii) number of pilot demonstration plots established (target: 3); (iv) estimated aggregate carbon sequestration potential (tCO₂e/year) as assessed by an independent agronomist; (v) ESRS S3 own workforce and affected community metrics attributable to the programme. Failure to meet any two KPIs triggers a review meeting within 30 days.',
+      },
+    ],
+  },
 ]
 
 export const KB_PAST_RECS_BY_ID: Map<string, PastRecommendation> = new Map(

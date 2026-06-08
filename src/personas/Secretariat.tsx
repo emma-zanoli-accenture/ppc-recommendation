@@ -120,6 +120,23 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
   line('Business Need', 11, true)
   paragraph(reco.businessNeed, 9)
 
+  // ─── Recommendation sections ───
+  if (reco.contentSections.length > 0) {
+    gap(4)
+    if (y > 230) { doc.addPage(); y = margin }
+    line('Recommendation Sections', 11, true)
+    reco.contentSections.forEach((section, idx) => {
+      gap(3)
+      if (y > 240) { doc.addPage(); y = margin }
+      doc.setFontSize(9.5)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(15, 39, 68)
+      doc.text(`${idx + 1}.  ${section.title}`, margin, y)
+      y += 7
+      paragraph(section.body, 8.5)
+    })
+  }
+
   // ─── Review approvals ───
   gap(2)
   line('Review Approvals', 11, true)
@@ -172,7 +189,7 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
 
 function CompletenessChecklist({ reco }: { reco: Recommendation }) {
   const checks = [
-    { label: 'All content sections complete', pass: reco.contentSections.length >= 7 },
+    { label: 'All content sections complete', pass: reco.contentSections.length >= 11 },
     { label: 'Draft resolution present', pass: reco.draftResolution.length > 0 },
     { label: 'Legal review approved', pass: reco.reviews.legal.status === 'Approved' },
     { label: 'Finance review approved', pass: reco.reviews.finance.status === 'Approved' },

@@ -17,72 +17,111 @@ export interface DraftingOutput {
   gaps: DraftSuggestion[]
 }
 
-// ─── Template (stub) sections ─────────────────────────────────────────────────
-// s1 & s2 are inferred from the business need — complete from the start.
-// s3, s4, s5, s6, s7 are stubs that the assisted-drafting items fill in.
+// ─── PPC εισήγηση — 11 mandatory sections ──────────────────────────────────
+// s1–s5 and s9–s11 are pre-filled from the business need and PPC template.
+// s6, s7, s8 are stubs awaiting assisted-drafting input.
+
+const DRAFT_RESOLUTION = `Subject: Approval of Bilateral Energy Trading Framework Agreement — PPC S.A. / Complexul Energetic Oltenia S.A. (CEO S.A.)
+
+The Board of Directors, having regard to:
+a) Recommendation no. EIS-2026-0042 of the Trading & Origination Division, dated 9 June 2026;
+b) the discussion at this meeting,
+
+RESOLVES:
+
+1. To approve the entry by PPC S.A. into a Bilateral Master Electricity Trading Agreement with Complexul Energetic Oltenia S.A. (CEO S.A.) for up to 500 GWh/year across the Greek–Romanian interconnector. Tenor: 24 months, annual renewal option. Price indexation: HUPX/HEnEx. Maximum annual notional value: EUR 40,000,000. Governing law: Greek law.
+
+2. Contract signature is subject to: (i) ACER written acknowledgement of REMIT Art. 4 pre-trade notification on file; (ii) RAAEY prior notification under L.4001/2011 Art. 11 acknowledged; (iii) Credit Support Annex (EUR 5M threshold) executed by both parties.
+
+3. Within 30 days of signature, Treasury shall execute the EMIR OTC derivative addendum designating REGIS-TR as trade repository; EMIR Art. 10 clearing threshold representation in force.
+
+4. The CEO of PPC S.A. is authorised to execute all documents up to EUR 40M notional. The CTO may sub-delegate EMIR addendum execution to the Group Treasurer. The BoD shall be informed within 10 business days of execution and satisfaction of conditions.
+
+Attachments: (A) Draft Master Agreement; (B) Credit Support Annex; (C) KYC Report — CEO S.A., 3 June 2026; (D) Finance/Treasury Confirmation Note, 7 June 2026.`
 
 const templateSections: ContentSection[] = [
   {
     id: 's1',
-    title: 'Strategic Context & Business Justification',
-    body: 'PPC S.A. seeks to capitalise on its cross-border transmission capacity between Greece and Romania to optimise generation dispatch and improve commercial margins. A bilateral energy trading framework with Complexul Energetic Oltenia S.A. (CEO S.A.) covering up to 500 GWh/year will enable PPC to balance seasonal load curves and establish a foothold in the emerging Romanian forward market ahead of HEnEx market coupling in 2027.',
+    title: 'Subject / Related Documents / Attachments',
+    body: 'Subject: New Cross-Border Energy Trading Framework Agreement — PPC S.A. / Complexul Energetic Oltenia S.A. (CEO S.A.)\n\nRelated documents: (a) Feasibility study — Greece–Romania cross-border trading capacity utilisation, Trading & Origination, March 2026; (b) Board decision no. ΔΣ-2024-031 authorising exploratory negotiations with Romanian counterparties; (c) Group Authorisation Matrix (GAM) — bilateral trading agreements, revision 2025.\n\nAttachments (to follow): (A) Draft Master Electricity Trading Agreement; (B) Draft Credit Support Annex; (C) KYC / AML screening report — CEO S.A., 3 June 2026; (D) Finance/Treasury confirmation note, 7 June 2026.',
   },
   {
     id: 's2',
-    title: 'Scope & Commercial Terms',
-    body: 'The agreement covers bilateral forward trades of electricity at the Greek–Romanian high-voltage interconnector (ENTSO-E NTC: 400 MW), with quarterly physical delivery and HUPX/HEnEx spot price indexation. Tenor: 24 months, renewable annually. Estimated notional value: approximately EUR 30–35M per annum at current forward curve.',
+    title: 'Necessity (Why)',
+    body: 'PPC S.A. seeks to capitalise on its cross-border transmission capacity between Greece and Romania (ENTSO-E NTC: 400 MW) by entering into a bilateral energy trading framework with Complexul Energetic Oltenia S.A. (CEO S.A.) covering up to 500 GWh/year. The arrangement is linked to PPC\'s 2026–2030 Business Plan (target: grow cross-border trading margins by 15% p.a.) and addresses the recurring operational need to balance seasonal load curves across the Greek–Romanian interconnector. A prior BoD decision (no. ΔΣ-2024-031) authorised exploratory negotiations with Romanian counterparties.\n\nRegulatory framework: preliminary assessment indicates applicability of REMIT, EMIR Refit, RAAEY prior notification, and MiFID II classification review — see Legal review for details.\n\nConsequences of not deciding: failure to capture EUR 3.5–4.5M p.a. net trading margin; loss of first-mover advantage ahead of HEnEx–HUPX market coupling (2027); risk that CEO S.A. concludes a competing arrangement with a third party.',
   },
   {
     id: 's3',
-    title: 'Regulatory & Legal Framework',
-    body: 'Cross-border arrangement — regulatory assessment pending. Framework involves international physical delivery; REMIT, EMIR, RAAEY, and MiFID II applicability to be confirmed by Legal review.',
+    title: 'Object (What)',
+    body: 'Scope: PPC S.A. seeks BoD authorisation to enter into a Bilateral Master Electricity Trading Agreement with Complexul Energetic Oltenia S.A. (CEO S.A.) for the physical exchange of up to 500 GWh/year of electricity across the Greek–Romanian interconnector (400 MW NTC). Tenor: 24 months with annual renewal option. Price indexation: HUPX/HEnEx quarterly average. Governing law: Greek law. Dispute resolution: Athens Court of First Instance (commercial disputes panel).\n\nAlternatives considered: (1) Exchange-based trading via HEnEx/HUPX — excluded due to insufficient liquidity for volumes above 200 GWh/year on the cross-border order book; (2) Capacity auction via ENTSO-E coordinated allocation — excluded as this mechanism does not support bilateral price indexation; (3) No-action — excluded due to identified commercial opportunity (EUR 3.5–4.5M p.a. net margin).\n\nKey transaction terms: Duration 24 months, annual renewal option. Penalty clauses: EUR 500,000 per occurrence for force majeure abuse. Option rights: annual volume uplift option of +100 GWh with 60-day notice.',
   },
   {
     id: 's4',
-    title: 'Financial Impact & Risk Assessment',
-    body: '[Pending Finance/Treasury input] Initial estimate: EUR 30–35M p.a. based on current forward curve. FX exposure (EUR/RON) and counterparty credit risk assessment outstanding.',
+    title: 'Location (Where)',
+    body: 'Primary transaction location: Greek–Romanian high-voltage interconnector, operating under the ENTSO-E regional coordination framework (NTC: 400 MW). Physical delivery point: the Greek side of the interconnection, per ENTSO-E capacity allocation rules.\n\nPPC S.A. registered address: Chalkokondyli 30, Athens 104 32, Greece. CEO S.A. registered address: Str. Republicii Nr. 1, Târgu Jiu, Gorj, Romania.',
   },
   {
     id: 's5',
-    title: 'Implementation Timeline',
-    body: 'Implementation timeline to be determined following completion of Legal review and RAAEY prior notification. Estimated contract commencement: Q4 2026.',
+    title: 'Implementation Method (How)',
+    body: 'Procurement procedure: this agreement is concluded directly under the bilateral commercial framework governed by PPC\'s Trading Policy v4.2 and the Group Authorisation Matrix. No competitive tender is required, as the arrangement is a bilateral commercial trading agreement with a specific counterparty identified through market intelligence and prior board-authorised negotiations (Board decision no. ΔΣ-2024-031).\n\nCompliance with internal regulations: confirmed compliance with PPC Group Trading Policy v4.2 (Schedule A permitted instruments), the Group Authorisation Matrix (bilateral agreements above EUR 10M require BoD approval), and the Group Anti-Bribery & Corruption Policy. Group Policy Approval level: BoD (consistent with EUR 32.5M p.a. notional and 24-month tenor). No opinion from an independent committee is required for commercial trading agreements of this type.',
   },
   {
     id: 's6',
-    title: 'Stakeholder Impact',
-    body: 'Internal stakeholders: Trading & Origination (lead), Legal, Treasury, and Regulatory Affairs. External stakeholder mapping pending.',
+    title: 'Timeline (When)',
+    body: 'Implementation timeline pending Legal review and regulatory filing confirmation.',
   },
   {
     id: 's7',
-    title: 'Risk Matrix',
-    body: 'Risk matrix to be completed following regulatory and financial assessment. Key risk categories: regulatory compliance, counterparty credit, market/price, and operational.',
+    title: 'Budget / Expense (How much)',
+    body: '[Pending Finance/Treasury confirmation — quantified values required]',
+  },
+  {
+    id: 's8',
+    title: 'Counterparty & Authorizations (Who)',
+    body: '[Pending KYC completion and authorizations confirmation]',
+  },
+  {
+    id: 's9',
+    title: 'Proposal for Decision',
+    body: 'The Trading & Origination Division recommends that the Board of Directors approve the entry by PPC S.A. into a Bilateral Master Electricity Trading Agreement with Complexul Energetic Oltenia S.A. (CEO S.A.) on the terms described herein, and adopts a decision as per the draft resolution set out in section 10 below.',
+  },
+  {
+    id: 's10',
+    title: 'Draft BoD Resolution',
+    body: DRAFT_RESOLUTION,
+  },
+  {
+    id: 's11',
+    title: 'Signatures & Approvals',
+    body: 'HIERARCHY\n  Submitted by: Alexandros Papadimitriou, Director, Trading & Origination\n  Co-signed: Maria Stavropoulou, Division Manager, International Trading & Regulatory Affairs\n\nPARALLEL BODIES\n  Nikolaos Constantinou, Director, Legal Department\n  Eleni Georgiou, Director, Finance & Treasury\n  Ioannis Tsirikos, Director, Regulatory Affairs\n\nGROUP GENERAL DIRECTORS\n  Georgios Lamprakis, Group General Director, Energy Trading & International Development\n  Sofia Andriopoulou, Group General Director, Finance\n\nLEGAL COUNSEL / GD LEGAL AFFAIRS & CORPORATE GOVERNANCE\n  Vasileios Oikonomou, Legal Counsel / Group GD Legal Affairs & Corporate Governance',
   },
 ]
 
 // ─── Assisted-drafting items ──────────────────────────────────────────────────
-// 3 suggested integrations + 2 information gaps; each targets a unique section.
+// 3 suggested integrations (sug-1→s2, sug-2→s6, sug-3→s3)
+// 2 information gaps (gap-1→s7, gap-2→s8)
 
 const suggestions: DraftSuggestion[] = [
   {
     id: 'sug-1',
     type: 'suggestion',
-    label: 'Regulatory analysis — REMIT / EMIR / RAAEY / MiFID II',
-    targetSectionId: 's3',
-    body: 'The arrangement triggers obligations under: REMIT Art. 4 (pre-trade ACER notification mandatory before contract signature — built into the draft resolution as a condition precedent); EMIR Refit (OTC derivative reporting and clearing threshold assessment — a derivative reporting addendum is required and Treasury must register trades with a designated trade repository such as REGIS-TR or DTCC); RAAEY prior notification under L.4001/2011 Art. 11 given the cross-border nature; and MiFID II Art. 2(1)(j) financial instrument classification review — Legal to confirm whether the commodity exemption applies. Romanian ANRE approval is the counterparty\'s responsibility under the bilateral framework.',
+    label: 'Regulatory framework — REMIT / EMIR / ACER / RAAEY / MiFID II',
+    targetSectionId: 's2',
+    body: 'PPC S.A. seeks to capitalise on its cross-border transmission capacity between Greece and Romania (ENTSO-E NTC: 400 MW) by entering into a bilateral energy trading framework with Complexul Energetic Oltenia S.A. (CEO S.A.) covering up to 500 GWh/year. The arrangement is linked to PPC\'s 2026–2030 Business Plan (target: grow cross-border trading margins by 15% p.a.) and addresses the recurring operational need to balance seasonal load curves across the Greek–Romanian interconnector. A prior BoD decision (no. ΔΣ-2024-031) authorised exploratory negotiations with Romanian counterparties.\n\nApplicable legislative & regulatory framework:\n• REMIT Art. 4 (Regulation EU 1227/2011): mandatory pre-trade notification to ACER before contract signature — hard condition precedent built into the draft resolution;\n• EMIR Refit Art. 2(7) (Regulation EU 2019/834): the bilateral electricity forward qualifies as an OTC derivative; a reporting addendum designating REGIS-TR as trade repository and an EMIR Art. 10 clearing threshold non-excess representation are required;\n• RAAEY — L.4001/2011 Art. 11: prior notification to the Regulatory Authority for Energy required given the cross-border nature of the arrangement;\n• MiFID II Art. 2(1)(j): commodity derivative exemption assessed as applicable (physical delivery, commercial hedging purpose) — confirmed by Legal;\n• Legea energiei 123/2012 (Romania): CEO S.A. must obtain ANRE approval for cross-border bilateral agreements exceeding 100 GWh/year — counterparty representation and warranty included in the agreement.\n\nExpected benefits: EUR 3.5–4.5M p.a. net trading margin; enhanced Greece–Romania market position ahead of HEnEx–HUPX coupling (2027). Consequences of not deciding: foregone margin; loss of first-mover advantage; CEO S.A. may engage a competitor.',
   },
   {
     id: 'sug-2',
     type: 'suggestion',
-    label: 'Implementation milestones — Q3–Q4 2026',
-    targetSectionId: 's5',
-    body: 'Q3 2026: Contract negotiation and completion of REMIT Art. 4 pre-trade notification to ACER; RAAEY prior notification filing under L.4001/2011 Art. 11. Q4 2026: Contract signature and commencement of first physical delivery period (Greek–Romanian interconnector). Q1 2027: EMIR OTC derivative addendum execution and trade repository registration (REGIS-TR or DTCC). Mid-2027: Scheduled review of the arrangement ahead of the HEnEx–HUPX market coupling milestone.',
+    label: 'Implementation milestones — Q3 2026 to mid-2027',
+    targetSectionId: 's6',
+    body: 'Q3 2026: Contract negotiation and term sheet finalisation; REMIT Art. 4 pre-trade notification filed with ACER (target: written acknowledgement received before Board meeting); RAAEY prior notification filed under L.4001/2011 Art. 11.\nQ4 2026: Contract signature — conditional on ACER written acknowledgement on file and RAAEY notification acknowledged; commencement of first physical delivery period (Greek–Romanian interconnector, 400 MW NTC).\nQ1 2027: EMIR OTC derivative addendum executed, designating REGIS-TR as trade repository; EMIR Art. 10 clearing threshold non-excess representation in force; initial EMIR compliance review completed.\nMid-2027: Review of arrangement ahead of HEnEx–HUPX market coupling milestone; Trading & Origination to provide updated market impact assessment to the Board 6 months before coupling go-live.',
   },
   {
     id: 'sug-3',
     type: 'suggestion',
-    label: 'Risk matrix — 4-risk framework',
-    targetSectionId: 's7',
-    body: 'Key risks: (1) Regulatory — REMIT/EMIR compliance gaps (Likelihood: Low, Impact: High — mitigant: conditions precedent built into draft resolution); (2) Commercial — counterparty default (CEO S.A., Fitch BB+) (Likelihood: Low, Impact: Medium — mitigant: credit support annex to be executed alongside master agreement); (3) Market — adverse EUR/RON price movement (Likelihood: Medium, Impact: Medium — mitigant: quarterly settlement with price review mechanism); (4) Operational — interconnector outage or capacity curtailment (Likelihood: Low, Impact: Low — mitigant: force majeure clause). All risks assessed as within PPC risk appetite.',
+    label: 'Object: risk analysis & mitigation — 4-risk framework',
+    targetSectionId: 's3',
+    body: 'Scope: PPC S.A. seeks BoD authorisation to enter into a Bilateral Master Electricity Trading Agreement with Complexul Energetic Oltenia S.A. (CEO S.A.) for the physical exchange of up to 500 GWh/year of electricity across the Greek–Romanian interconnector (400 MW NTC). Tenor: 24 months with annual renewal option. Price indexation: HUPX/HEnEx quarterly average. Governing law: Greek law. Dispute resolution: Athens Court of First Instance (commercial disputes panel).\n\nAlternatives considered: (1) Exchange-based trading via HEnEx/HUPX — excluded due to insufficient liquidity for volumes above 200 GWh/year on the cross-border order book; (2) Capacity auction via ENTSO-E coordinated allocation — excluded as this mechanism does not support bilateral price indexation; (3) No-action — excluded due to identified commercial opportunity (EUR 3.5–4.5M p.a. net margin).\n\nKey transaction terms: Duration 24 months, annual renewal option. Penalty clauses: EUR 500,000 per occurrence for force majeure abuse. Option rights: annual volume uplift option of +100 GWh with 60-day notice.\n\nRisk analysis & mitigation: (1) Regulatory — REMIT/EMIR non-compliance (Likelihood: Low, Impact: High) — mitigated by conditions precedent in draft resolution requiring ACER acknowledgement and RAAEY notification before signature; (2) Financial — EUR/RON FX basis ~2.3% (Likelihood: Medium, Impact: Medium) — mitigated by Treasury forward hedging programme (EUR 750K cost, within budget); (3) Commercial — CEO S.A. Fitch BB+ default (Likelihood: Low, Impact: Medium) — mitigated by Credit Support Annex (EUR 5M threshold); (4) Operational — interconnector curtailment (Likelihood: Low, Impact: Low) — mitigated by force majeure clause and quarterly capacity review clause.',
   },
 ]
 
@@ -90,30 +129,17 @@ const gaps: DraftSuggestion[] = [
   {
     id: 'gap-1',
     type: 'gap',
-    label: 'Financial Impact: quantified values required',
-    targetSectionId: 's4',
-    body: 'Estimated annual contract value: EUR 32.5M, confirmed by Finance/Treasury (budget clearance obtained 7 June 2026). Primary financial risks: EUR/RON FX basis (~2.3%), mitigated via forward hedging programme approved by Treasury. Interconnector capacity curtailment and counterparty credit risk (CEO S.A., rated Fitch BB+) are within PPC risk appetite. A credit support annex will be executed alongside the master agreement.',
+    label: 'Budget: quantified values required (sec. 7)',
+    targetSectionId: 's7',
+    body: 'Estimated annual notional value: EUR 32.5M (500 GWh × EUR 65/MWh, HUPX/HEnEx Q3 2026 forward curve, confirmed by Finance/Treasury on 7 June 2026). Classification: OPEX (commercial trading activity). Cost centre: CT-2400 (Trading & Origination). Account number: 6720.004 (bilateral energy purchases/sales).\n\nFX hedging cost: EUR 750,000 p.a. (EUR/RON forward programme, within Treasury risk appetite). Total budget envelope: EUR 40,000,000 p.a. — within the 2026 bilateral trading budget (BoD resolution ΔΣ-2025-047). Expected net contribution margin: EUR 3.5–4.5M p.a. under base-case forward curves.\n\nEMIR initial margin requirement: estimated EUR 1.2M — within available collateral facility headroom of EUR 8.4M. Counterparty credit risk (CEO S.A., Fitch BB+): acceptable under PPC Counterparty Risk Framework; Credit Support Annex with EUR 5M threshold required.',
   },
   {
     id: 'gap-2',
     type: 'gap',
-    label: 'Stakeholder map: external regulatory contacts missing',
-    targetSectionId: 's6',
-    body: 'Internal stakeholders: Trading & Origination (lead, counterparty management), Legal (REMIT/EMIR/MiFID II compliance), Treasury (EMIR reporting, FX hedging), and Regulatory Affairs (RAAEY notification). External stakeholders: ACER (recipient of REMIT Art. 4 pre-trade notification), RAAEY (prior notification under L.4001/2011 Art. 11), HEnEx (market coupling coordination, 2027 milestone), and CEO S.A. (counterparty, Romanian electricity producer). No direct impact on PPC retail customers or tariffs.',
+    label: 'Counterparty: KYC & authorizations missing (sec. 8)',
+    targetSectionId: 's8',
+    body: '8.1 Counterparty Identification: Complexul Energetic Oltenia S.A. (CEO S.A.), registered in Romania (Registration No. J28/11/1998, VAT RO 2814214). Ownership: Romanian state via Ministry of Energy 77.15%; listed on Bucharest Stock Exchange (ticker: OLT). Credit rating: Fitch BB+ (stable outlook), confirmed June 2026.\n\nKYC completed 3 June 2026: AML screening — PASS; international sanctions (EU/UN/OFAC) — CLEAR; anti-corruption due diligence — NO adverse findings. Related-Party check: NOT a Related Party per PPC Group Related-Party Policy (confirmed Group Legal, 5 June 2026).\n\n8.2 Authorizations: The CEO of PPC S.A. is authorised to execute all transaction documents up to EUR 40M notional. The CTO is authorised to execute the EMIR OTC derivative addendum; sub-delegation to Group Treasurer is permitted in writing. The Board of Directors shall be informed within 10 business days of execution and satisfaction of all conditions precedent set out in the draft resolution.',
   },
-]
-
-// ─── Draft resolution ─────────────────────────────────────────────────────────
-
-const draftResolution = `The Board of Directors of PPC S.A. hereby approves the entry into a bilateral energy trading framework agreement with Complexul Energetic Oltenia S.A. (CEO S.A.) for the exchange of up to 500 GWh per annum of electrical energy across the Greek–Romanian high-voltage interconnector, subject to: (i) completion of the REMIT pre-trade notification to ACER prior to contract signature; (ii) prior notification to RAAEY pursuant to Article 11 of L.4001/2011; (iii) execution of the EMIR-compliant OTC derivative reporting addendum by the Treasury function; and (iv) satisfaction of all conditions precedent set forth in the agreement. The Board further authorises the Chief Executive Officer to execute all documents and take all actions necessary to implement this resolution.`
-
-const regulatoryRefs = [
-  'REMIT Art. 4',
-  'EMIR Refit',
-  'ACER Guidance 2025',
-  'RAAEY L.4001/2011 Art. 11',
-  'MiFID II Art. 2(1)(j)',
-  'HEnEx Market Coupling Rules',
 ]
 
 // ─── Agent script ─────────────────────────────────────────────────────────────
@@ -122,26 +148,35 @@ export const draftingAgentScript: AgentScript = {
   agentId: 'drafting-agent',
   agentName: 'Drafting Agent',
   steps: [
-    'Loading Procurement template — cross-border commercial agreement',
-    'Parsing business need: Greece–Romania interconnector capacity',
+    'Loading PPC recommendation template — 11-section εισήγηση format',
+    'Parsing business need: Greece–Romania interconnector, 500 GWh/year',
+    'Pre-filling sections 1–5 and 9–11 from business need and PPC template',
     'Identifying REMIT Art. 4 wholesale market disclosure obligations',
     'Flagging EMIR Refit OTC derivative reporting threshold',
     'Referencing ACER guidance on cross-border capacity allocation',
     'Adding RAAEY prior notification requirement (L.4001/2011 Art. 11)',
-    'Assessing MiFID II Art. 2(1)(j) financial instrument classification risk',
-    'Incorporating HEnEx market coupling transition provisions',
-    'Generating mandatory draft resolution with conditions precedent',
-    'Running gap analysis — 2 gaps detected',
+    'Generating draft BoD resolution with conditions precedent — section 10',
+    'Inserting signature block with role hierarchy — section 11',
+    'Running gap analysis — sections 6, 7, 8 require completion',
   ],
-  result: `Template scaffolded across 7 sections. Sections 1 and 2 are fully drafted from the business need. Four sections require completion via the assisted-drafting items below.
+  result: `Template scaffolded across 11 sections (PPC εισήγηση format). Sections 1–5 and 9–11 are fully drafted. Sections 6, 7, and 8 require completion via the assisted-drafting items below.
 
-3 suggested integrations identified: regulatory analysis (REMIT/EMIR/RAAEY/MiFID II), implementation milestones, and a 4-risk framework matrix. 2 information gaps detected: quantified financial figures pending Finance/Treasury confirmation, and external stakeholder contacts missing.
+3 suggested integrations identified: full regulatory framework with REMIT/EMIR/RAAEY/MiFID II (→ sec. 2), implementation milestones Q3 2026–mid-2027 (→ sec. 6), and 4-risk framework with mitigants (→ sec. 3). 2 information gaps detected: budget/OPEX/cost centre missing from Finance/Treasury (→ sec. 7), counterparty KYC and authorizations pending (→ sec. 8).
+
+Draft BoD resolution (sec. 10) includes conditions precedent: ACER acknowledgement, RAAEY notification, Credit Support Annex. Signature block (sec. 11) complete with role hierarchy.
 
 Click "Apply" on each item to insert the pre-written content, or click "Auto-complete draft" to resolve all at once.`,
   structuredOutput: {
     templateSections,
-    draftResolution,
-    regulatoryRefs,
+    draftResolution: DRAFT_RESOLUTION,
+    regulatoryRefs: [
+      'REMIT Art. 4',
+      'EMIR Refit',
+      'ACER Guidance 2025',
+      'RAAEY L.4001/2011 Art. 11',
+      'MiFID II Art. 2(1)(j)',
+      'HEnEx Market Coupling Rules',
+    ],
     suggestions,
     gaps,
   } satisfies DraftingOutput,
@@ -149,5 +184,6 @@ Click "Apply" on each item to insert the pre-written content, or click "Auto-com
     { id: 'pb-4', relevance: 'Section structure and regulatory scaffolding modelled on this precedent' },
     { id: 'pb-5', relevance: 'Bilateral offtake template and draft resolution wording' },
     { id: 'pb-2', relevance: 'FX exposure section and Treasury sign-off language' },
+    { id: 'pb-10', relevance: 'Full 11-section PPC εισήγηση format reference; tranche payment and KPI structure' },
   ],
 }

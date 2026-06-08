@@ -10,15 +10,15 @@ export const legalReviewAgentScript: AgentScript = {
   agentId: 'legal-review-agent',
   agentName: 'Legal Review Agent',
   steps: [
-    'Retrieving REMIT Regulation (EU) No 1227/2011 — Art. 4 and Art. 8',
-    'Cross-referencing ACER Market Monitoring Report 2025',
-    'Analysing EMIR Refit clearing obligation — energy OTC threshold',
-    'Reviewing RAAEY notification procedure under L.4001/2011 Art. 11',
+    'Reviewing sections 2 (Necessity) and 3 (Object) for REMIT/EMIR compliance',
+    'Cross-referencing ACER Market Monitoring Report 2025 — Art. 4 pre-trade notification',
+    'Analysing EMIR Refit clearing obligation — energy OTC threshold (sec. 3)',
+    'Reviewing section 5 (Implementation Method) for procedural compliance',
+    'Reviewing RAAEY notification procedure under L.4001/2011 Art. 11 (sec. 2)',
     'Assessing MiFID II Art. 2(1)(j) financial instrument classification',
-    'Checking HEnEx cross-border capacity allocation rules',
-    'Reviewing enforceability under Romanian law (Legea energiei 123/2012)',
+    'Verifying section 8 (Counterparty) — KYC and related-party findings',
+    'Reviewing enforceability under Romanian law (Legea energiei 123/2012) — sec. 8',
     'Identifying critical items requiring attention',
-    'Drafting suggested integrations',
   ],
   result: `Legal review complete. I have identified 3 items requiring attention before approval.
 

@@ -533,11 +533,39 @@ function BUDraftView({
                 Run the Drafting Agent to scaffold the recommendation document.
               </p>
               <p className="text-xs text-slate-400 italic">
-                7 sections · regulatory framework · draft resolution
+                11 sections (PPC εισήγηση format) · regulatory framework · draft resolution
               </p>
             </div>
           ) : (
             <>
+              {/* Formal header block */}
+              <div className="bg-surface-raised border border-border-strong rounded-xl p-4">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                  <div>
+                    <span className="text-slate-400 font-medium">Proposing Business Unit:</span>
+                    <span className="ml-2 text-slate-700">{reco.businessUnit}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium">Protocol No.:</span>
+                    <span className="ml-2 font-mono text-slate-700">EIS-2026-{reco.id.slice(-4).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium">Contact:</span>
+                    <span className="ml-2 text-slate-700">{reco.owner} · 210 490 0000</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium">Date:</span>
+                    <span className="ml-2 text-slate-700">
+                      {new Date(reco.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-slate-400 font-medium">Email:</span>
+                    <span className="ml-2 text-slate-700">trading@ppcgroup.com</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Regulatory refs */}
               {reco.regulatoryRefs.length > 0 && (
                 <div className="flex flex-wrap gap-2">
@@ -647,7 +675,7 @@ function BUDraftView({
                           </div>
                         </div>
                       ) : (
-                        <p className={`text-sm leading-relaxed pl-7 ${
+                        <p className={`text-sm leading-relaxed pl-7 whitespace-pre-wrap ${
                           stub && !typing_ ? 'text-slate-400 italic' : 'text-slate-600'
                         }`}>
                           {displayBody}
@@ -667,8 +695,8 @@ function BUDraftView({
                 })}
               </div>
 
-              {/* Draft resolution */}
-              {reco.draftResolution && (
+              {/* Draft resolution — shown only when no s10 section */}
+              {reco.draftResolution && !reco.contentSections.some((s) => s.id === 's10') && (
                 <div className="bg-surface-raised border border-border-strong rounded-xl p-4">
                   <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium mb-2">
                     Draft Resolution
@@ -1123,28 +1151,28 @@ const LEGAL_COMMENTS: LegalComment[] = [
     id: 'lc-1',
     ref: 'REMIT Art. 4',
     severity: 'high',
-    description: 'ACER pre-trade notification must be completed and acknowledged before contract signature. Strengthen the Regulatory section with explicit ACER acknowledgement filing requirement.',
+    description: 'ACER pre-trade notification must be completed and acknowledged before contract signature. Add explicit condition precedent language in the Object section (sec. 3) and strengthen the risk analysis.',
     targetSectionId: 's3',
     revisedBody:
-      'The arrangement triggers obligations under: REMIT Art. 4 — pre-trade notification to ACER is mandatory before contract signature and is a hard condition precedent; written ACER acknowledgement must be obtained and filed with Regulatory Affairs prior to the Board meeting; EMIR Refit — the bilateral forward qualifies as an OTC derivative under Art. 2(7); a derivative reporting addendum designating REGIS-TR as trade repository must be executed by Treasury, and a clearing threshold non-excess representation (EMIR Art. 10) is included in the agreement; RAAEY prior notification under L.4001/2011 Art. 11; and MiFID II Art. 2(1)(j) commodity exemption — confirmed applicable by Legal following classification review.',
+      'Scope: PPC S.A. seeks BoD authorisation to enter into a Bilateral Master Electricity Trading Agreement with Complexul Energetic Oltenia S.A. (CEO S.A.) for the physical exchange of up to 500 GWh/year of electricity across the Greek–Romanian interconnector (400 MW NTC). Tenor: 24 months with annual renewal option. Price indexation: HUPX/HEnEx quarterly average. Governing law: Greek law. Dispute resolution: Athens Court of First Instance (commercial disputes panel).\n\nAlternatives considered: (1) Exchange-based trading via HEnEx/HUPX — excluded due to insufficient liquidity for volumes above 200 GWh/year on the cross-border order book; (2) Capacity auction via ENTSO-E coordinated allocation — excluded as this mechanism does not support bilateral price indexation; (3) No-action — excluded due to identified commercial opportunity (EUR 3.5–4.5M p.a. net margin).\n\nKey transaction terms: Duration 24 months, annual renewal option. Penalty clauses: EUR 500,000 per occurrence for force majeure abuse. Option rights: annual volume uplift option of +100 GWh with 60-day notice. CONDITION PRECEDENT (REMIT Art. 4): Contract signature is subject to the written ACER acknowledgement of the pre-trade notification being on file with Regulatory Affairs and the Corporate Secretary, not less than 5 business days before the Board meeting.\n\nRisk analysis & mitigation: (1) Regulatory — REMIT/EMIR non-compliance (Likelihood: Low, Impact: High) — mitigated by conditions precedent in draft resolution; ACER acknowledgement is a hard regulatory gate; non-compliance would constitute market manipulation under REMIT Art. 8; (2) Financial — EUR/RON FX basis ~2.3% (Likelihood: Medium, Impact: Medium) — mitigated by Treasury forward hedging programme (EUR 750K cost, within budget); (3) Commercial — CEO S.A. Fitch BB+ default (Likelihood: Low, Impact: Medium) — mitigated by Credit Support Annex (EUR 5M threshold); (4) Operational — interconnector curtailment (Likelihood: Low, Impact: Low) — mitigated by force majeure clause and quarterly capacity review clause.',
   },
   {
     id: 'lc-2',
     ref: 'EMIR Refit Art. 2(7)',
     severity: 'high',
-    description: 'OTC derivative addendum required; designated trade repository (REGIS-TR) must be named explicitly. Add EMIR Art. 10 clearing threshold non-excess representation to the implementation timeline.',
-    targetSectionId: 's5',
+    description: 'OTC derivative addendum required; REGIS-TR must be named explicitly. Add EMIR addendum execution as a Q4 2026 milestone in the Timeline section (sec. 6).',
+    targetSectionId: 's6',
     revisedBody:
-      'Q3 2026: Contract negotiation; REMIT Art. 4 pre-trade notification filed with ACER (target: written acknowledgement received before Board meeting); RAAEY prior notification filed under L.4001/2011 Art. 11. Q4 2026: Contract signature conditional on ACER acknowledgement on file; commencement of first physical delivery period (Greek–Romanian interconnector, 400 MW NTC). Q1 2027: EMIR OTC derivative addendum executed, designating REGIS-TR as trade repository; EMIR Art. 10 clearing threshold non-excess representation in force. Mid-2027: Review of arrangement ahead of HEnEx–HUPX market coupling milestone; EMIR compliance review completed.',
+      'Q3 2026: Contract negotiation and term sheet finalisation; REMIT Art. 4 pre-trade notification filed with ACER (written acknowledgement must be on file before BoD meeting — 5 business days\' notice requirement); RAAEY prior notification filed under L.4001/2011 Art. 11.\nQ4 2026: Contract signature — conditional on ACER written acknowledgement and RAAEY acknowledgement both on file; commencement of first physical delivery period (Greek–Romanian interconnector, 400 MW NTC). Within 30 days of signature: EMIR OTC derivative addendum executed designating REGIS-TR as trade repository per Board resolution ΔΣ-2023-015; EMIR Art. 10 clearing threshold non-excess representation in force.\nQ1 2027: Initial EMIR compliance review and clearing threshold recalculation; ANRE representation from CEO S.A. confirmed current.\nMid-2027: Scheduled review of arrangement ahead of HEnEx–HUPX market coupling milestone; Trading & Origination to provide updated impact assessment to BoD 6 months before coupling go-live.',
   },
   {
     id: 'lc-3',
     ref: 'Legea energiei 123/2012',
     severity: 'advisory',
-    description: 'Counterparty (CEO S.A.) must obtain ANRE approval for cross-border agreements >100 GWh/year. Add representation and warranty plus PPC termination right in Art. 6 of the agreement to the stakeholder section.',
-    targetSectionId: 's6',
+    description: 'Counterparty (CEO S.A.) must obtain ANRE approval for cross-border agreements >100 GWh/year. Add representation and warranty plus PPC termination right in the Counterparty section (sec. 8).',
+    targetSectionId: 's8',
     revisedBody:
-      'Internal stakeholders: Trading & Origination (lead, counterparty management), Legal (REMIT/EMIR/MiFID II compliance, Art. 6 representation drafting), Treasury (EMIR reporting, REGIS-TR registration, FX hedging), and Regulatory Affairs (RAAEY notification, ACER filing). External stakeholders: ACER (recipient of REMIT Art. 4 pre-trade notification; written acknowledgement required before signature), RAAEY (prior notification under L.4001/2011 Art. 11), HEnEx (market coupling coordination, 2027 milestone), ANRE (Romanian regulator — CEO S.A. must obtain ANRE approval for cross-border bilateral agreements exceeding 100 GWh/year; PPC to include representation and warranty and termination right in Art. 6 of the agreement), and CEO S.A. (counterparty, Romanian electricity producer, Fitch BB+). No direct impact on PPC retail customers or tariffs.',
+      '8.1 Counterparty Identification: Complexul Energetic Oltenia S.A. (CEO S.A.), registered in Romania (Registration No. J28/11/1998, VAT RO 2814214). Ownership: Romanian state via Ministry of Energy 77.15%; listed on Bucharest Stock Exchange (ticker: OLT). Credit rating: Fitch BB+ (stable outlook), confirmed June 2026.\n\nKYC completed 3 June 2026: AML screening — PASS; international sanctions (EU/UN/OFAC) — CLEAR; anti-corruption due diligence — NO adverse findings. Related-Party check: NOT a Related Party per PPC Group Related-Party Policy (confirmed Group Legal, 5 June 2026).\n\nANRE representation & warranty: pursuant to Art. 6 of the Master Agreement, CEO S.A. represents and warrants that it holds all requisite ANRE approvals for cross-border bilateral electricity agreements of this type and volume (>100 GWh/year under Legea energiei 123/2012). PPC has an express contractual termination right in the event that ANRE approval is withdrawn or suspended during the contract term.\n\n8.2 Authorizations: The CEO of PPC S.A. is authorised to execute all transaction documents up to EUR 40M notional. The CTO is authorised to execute the EMIR OTC derivative addendum; sub-delegation to Group Treasurer is permitted in writing. The Board of Directors shall be informed within 10 business days of execution and satisfaction of all conditions precedent set out in the draft resolution.',
   },
 ]
 
@@ -1378,6 +1406,35 @@ function BUUpdateView({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ── Document ────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-3">
+          {/* Formal header block */}
+          {reco.contentSections.length > 0 && (
+            <div className="bg-surface-raised border border-border-strong rounded-xl p-4">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                <div>
+                  <span className="text-slate-400 font-medium">Proposing Business Unit:</span>
+                  <span className="ml-2 text-slate-700">{reco.businessUnit}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-medium">Protocol No.:</span>
+                  <span className="ml-2 font-mono text-slate-700">EIS-2026-{reco.id.slice(-4).toUpperCase()}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-medium">Contact:</span>
+                  <span className="ml-2 text-slate-700">{reco.owner} · 210 490 0000</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-medium">Date:</span>
+                  <span className="ml-2 text-slate-700">
+                    {new Date(reco.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-slate-400 font-medium">Email:</span>
+                  <span className="ml-2 text-slate-700">trading@ppcgroup.com</span>
+                </div>
+              </div>
+            </div>
+          )}
           {reco.regulatoryRefs.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {reco.regulatoryRefs.map((ref) => (
@@ -1489,7 +1546,7 @@ function BUUpdateView({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm leading-relaxed pl-7 text-slate-600">
+                  <p className="text-sm leading-relaxed pl-7 text-slate-600 whitespace-pre-wrap">
                     {displayBody}
                     {typing_ && (
                       <motion.span
@@ -1506,7 +1563,7 @@ function BUUpdateView({
             )
           })}
 
-          {reco.draftResolution && (
+          {reco.draftResolution && !reco.contentSections.some((s) => s.id === 's10') && (
             <div className="bg-surface-raised border border-border-strong rounded-xl p-4">
               <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium mb-2">
                 Draft Resolution
@@ -1586,7 +1643,7 @@ function BUUpdateView({
                       <div>
                         <p className="text-sm font-semibold text-emerald-700">All comments addressed</p>
                         <p className="text-xs text-emerald-600 mt-0.5">
-                          3 changes integrated · sections 3, 5 &amp; 6 updated
+                          3 changes integrated · sections 3, 6 &amp; 8 updated
                         </p>
                       </div>
                     </div>

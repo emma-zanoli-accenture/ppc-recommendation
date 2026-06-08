@@ -12,6 +12,7 @@ export const financeReviewAgentScript: AgentScript = {
   agentName: 'Finance Review Agent',
   steps: [
     'Retrieving FY2026 budget — Trading & Origination division',
+    'Reviewing section 7 (Budget/Expense) — cost centre, account, CAPEX/OPEX classification',
     'Modelling contract value: 500 GWh × EUR 65/MWh forward curve',
     'Assessing counterparty credit risk — CEO S.A. (Fitch BB+)',
     'Quantifying EMIR initial margin requirement',
