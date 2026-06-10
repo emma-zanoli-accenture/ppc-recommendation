@@ -4,7 +4,7 @@ import { useRecoStore } from '@/store'
 import { APP_NAME, PPC_CLIENT } from '@/lib/constants'
 
 const PERSONAS: { id: Persona; label: string; sublabel: string; icon: React.ElementType }[] = [
-  { id: 'bu', label: 'Recommendation', sublabel: 'Owner', icon: Users },
+  { id: 'bu', label: 'Rec. Owner', sublabel: '', icon: Users },
   { id: 'review', label: 'Reviewers', sublabel: '', icon: Scale },
   { id: 'secretariat', label: 'Chairman', sublabel: '', icon: Crown },
 ]
