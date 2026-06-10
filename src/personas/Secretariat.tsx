@@ -86,6 +86,8 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
   const WHITE:  [n,n,n] = [255, 255, 255]
   const GREEN:  [n,n,n] = [5, 150, 105]
   const AMBER:  [n,n,n] = [180, 120, 0]
+  const BRAND:  [n,n,n] = [15, 39, 68]
+  const BRAND_MID: [n,n,n] = [60, 90, 130]
 
   type n = number
 
@@ -316,13 +318,19 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
         // Signature table — render dynamically from reco state
         const allSlots = SIG_TIERS.flatMap((t) => t.slots)
         const signedCount = allSlots.filter((s) => s.signed(reco)).length
+        const chairmanBypassedCount = allSlots.filter((s) => s.chairmanBypassed(reco)).length
+        const clearedCount = signedCount + chairmanBypassedCount
 
         needY(6)
         doc.setFontSize(7.5)
         doc.setFont('helvetica', 'bold')
-        doc.setTextColor(...(signedCount === allSlots.length ? GREEN : AMBER))
-        doc.text(`${signedCount} of ${allSlots.length} signatures collected`, ML + 8, y)
+        doc.setTextColor(...(clearedCount === allSlots.length ? GREEN : AMBER))
+        let sigSummary = `${signedCount} of ${allSlots.length} signatures collected`
+        if (chairmanBypassedCount > 0) sigSummary += `  |  ${chairmanBypassedCount} authorised by Chairman`
+        doc.text(sigSummary, ML + 8, y)
         y += 6
+
+        const chairmanApprovedAt = reco.directToChairman?.approvedAt
 
         for (const tier of SIG_TIERS) {
           needY(8)
@@ -334,6 +342,7 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
 
           for (const slot of tier.slots) {
             const isSigned = slot.signed(reco)
+            const isChairmanBypassed = slot.chairmanBypassed(reco)
             const isBypassed = slot.bypassed(reco)
             const name = isSigned ? slot.getName(reco) : null
             const ts = isSigned ? slot.getTs(reco) : undefined
@@ -360,6 +369,26 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
               doc.setFont('helvetica', 'bold')
               doc.setTextColor(...GREEN)
               doc.text('SIGNED', W - MR - 4, y, { align: 'right' })
+            } else if (isChairmanBypassed) {
+              doc.setFillColor(232, 238, 245)
+              doc.roundedRect(ML + 8, y - 4.5, CW - 8, 6, 0.5, 0.5, 'F')
+
+              doc.setFontSize(7.5)
+              doc.setFont('helvetica', 'italic')
+              doc.setTextColor(...BRAND_MID)
+              doc.text(san(slot.role), ML + 11, y)
+
+              if (chairmanApprovedAt) {
+                doc.setFont('helvetica', 'normal')
+                doc.setTextColor(...LIGHT)
+                const roleW = doc.getTextWidth(san(slot.role))
+                const dateStr = new Date(chairmanApprovedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                doc.text(dateStr, ML + 11 + roleW + 3, y)
+              }
+
+              doc.setFont('helvetica', 'bold')
+              doc.setTextColor(...BRAND)
+              doc.text('AUTHORISED', W - MR - 4, y, { align: 'right' })
             } else if (isBypassed) {
               doc.setFontSize(7.5)
               doc.setFont('helvetica', 'italic')
@@ -397,41 +426,65 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
   hRule(BORDER, 0.25, 5)
   heading('Review Approvals')
 
-  ;(['legal', 'finance', 'compliance'] as ReviewFunction[]).forEach((fn) => {
-    const review = reco.reviews[fn]
-    const isOk = review.status.startsWith('Approved')
+  if (reco.directToChairman) {
     const rowH = 11
+    const authorised = !!reco.directToChairman.chairmanApproved
     needY(rowH + 3)
-
-    // Row background
-    const bgR = isOk ? 236 : 254, bgG = isOk ? 253 : 243, bgB = isOk ? 243 : 199
-    doc.setFillColor(bgR, bgG, bgB)
-    doc.setDrawColor(...(isOk ? GREEN : AMBER))
+    doc.setFillColor(...(authorised ? [236, 253, 243] as [n,n,n] : [255, 251, 235] as [n,n,n]))
+    doc.setDrawColor(...(authorised ? GREEN : AMBER))
     doc.setLineWidth(0.2)
     doc.roundedRect(ML, y - rowH + 3, CW, rowH, 1.2, 1.2, 'FD')
-
-    // Left status stripe
-    doc.setFillColor(...(isOk ? GREEN : AMBER))
+    doc.setFillColor(...(authorised ? GREEN : AMBER))
     doc.rect(ML, y - rowH + 3, 2.5, rowH, 'F')
-
     const rowMid = y - rowH + 3 + rowH / 2 + 1
     doc.setFontSize(8.5)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...TEXT)
-    doc.text(FN_LABELS[fn], ML + 6, rowMid)
-
-    if (review.reviewer) {
+    doc.setTextColor(...(authorised ? GREEN : AMBER))
+    doc.text(
+      authorised ? 'Direct submission authorised by Chairman' : 'Direct submission — standard reviews bypassed',
+      ML + 6, rowMid
+    )
+    if (authorised && reco.directToChairman.approvedAt) {
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(...MED)
-      doc.text(san(review.reviewer), ML + 30, rowMid)
+      doc.text(san(new Date(reco.directToChairman.approvedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })), W - MR - 2, rowMid, { align: 'right' })
     }
-
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...(isOk ? GREEN : AMBER))
-    doc.text(san(review.status), W - MR - 2, rowMid, { align: 'right' })
-
     y += rowH + 2.5
-  })
+  } else {
+    ;(['legal', 'finance', 'compliance'] as ReviewFunction[]).forEach((fn) => {
+      const review = reco.reviews[fn]
+      const isOk = review.status.startsWith('Approved')
+      const rowH = 11
+      needY(rowH + 3)
+
+      const bgR = isOk ? 236 : 254, bgG = isOk ? 253 : 243, bgB = isOk ? 243 : 199
+      doc.setFillColor(bgR, bgG, bgB)
+      doc.setDrawColor(...(isOk ? GREEN : AMBER))
+      doc.setLineWidth(0.2)
+      doc.roundedRect(ML, y - rowH + 3, CW, rowH, 1.2, 1.2, 'FD')
+
+      doc.setFillColor(...(isOk ? GREEN : AMBER))
+      doc.rect(ML, y - rowH + 3, 2.5, rowH, 'F')
+
+      const rowMid = y - rowH + 3 + rowH / 2 + 1
+      doc.setFontSize(8.5)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...TEXT)
+      doc.text(FN_LABELS[fn], ML + 6, rowMid)
+
+      if (review.reviewer) {
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(...MED)
+        doc.text(san(review.reviewer), ML + 30, rowMid)
+      }
+
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...(isOk ? GREEN : AMBER))
+      doc.text(san(review.status), W - MR - 2, rowMid, { align: 'right' })
+
+      y += rowH + 2.5
+    })
+  }
 
   // ════════════════════════════════════════════════
   // DRAFT RESOLUTION (only if s10 not in sections)
@@ -509,7 +562,12 @@ function CompletenessChecklist({ reco }: { reco: Recommendation }) {
   const directApproved = !!reco.directToChairman?.chairmanApproved
 
   const checks = [
-    { label: 'All content sections complete', pass: reco.contentSections.length >= 11 },
+    {
+      label: 'All content sections complete',
+      pass: reco.contentSections.some((s) => s.id === 's10')
+        ? reco.contentSections.length >= 11
+        : reco.contentSections.length > 0,
+    },
     { label: 'Draft resolution present', pass: reco.draftResolution.length > 0 },
     ...(directApproved
       ? [{ label: 'Direct submission authorised by Chairman', pass: true }]
@@ -771,25 +829,43 @@ function ChairmanModal({
           </div>
 
           {/* Review status */}
-          <div className="grid grid-cols-3 gap-2">
-            {(['legal', 'finance', 'compliance'] as ReviewFunction[]).map((fn) => {
-              const review = reco.reviews[fn]
-              const ok = review.status === 'Approved'
-              return (
-                <div
-                  key={fn}
-                  className={`rounded-lg p-2.5 text-center border ${ok ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}
-                >
-                  <p className={`text-xs font-semibold ${ok ? 'text-emerald-700' : 'text-amber-700'}`}>
-                    {FN_LABELS[fn]}
-                  </p>
-                  <p className={`text-[10px] mt-0.5 ${ok ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {review.status}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
+          {reco.directToChairman ? (
+            reco.directToChairman.chairmanApproved ? (
+              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                <p className="text-xs font-medium text-emerald-700">
+                  Direct submission authorised by Chairman — standard reviews bypassed
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                <p className="text-xs font-medium text-amber-700">
+                  Direct submission — standard reviews bypassed, authorisation pending
+                </p>
+              </div>
+            )
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {(['legal', 'finance', 'compliance'] as ReviewFunction[]).map((fn) => {
+                const review = reco.reviews[fn]
+                const ok = review.status === 'Approved'
+                return (
+                  <div
+                    key={fn}
+                    className={`rounded-lg p-2.5 text-center border ${ok ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}
+                  >
+                    <p className={`text-xs font-semibold ${ok ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      {FN_LABELS[fn]}
+                    </p>
+                    <p className={`text-[10px] mt-0.5 ${ok ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {review.status}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          )}
 
           {/* Readiness */}
           <div className="flex items-center gap-4 bg-surface-raised rounded-xl p-3">

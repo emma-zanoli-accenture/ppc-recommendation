@@ -29,6 +29,7 @@ export interface SigSlot {
   getName: (r: Recommendation) => string | null
   signed: (r: Recommendation) => boolean
   bypassed: (r: Recommendation) => boolean
+  chairmanBypassed: (r: Recommendation) => boolean
   getTs: (r: Recommendation) => string | undefined
 }
 
@@ -48,6 +49,7 @@ export const SIG_TIERS: SigTier[] = [
         getName: (r) => r.owner,
         signed: (r) => BEYOND_REVIEW.has(r.status) || !!r.directToChairman,
         bypassed: () => false,
+        chairmanBypassed: () => false,
         getTs: (r) =>
           auditTs(r, 'Legal feedback integrated — version accepted') ??
           auditTs(r, 'Sent directly to Chairman') ??
@@ -63,7 +65,10 @@ export const SIG_TIERS: SigTier[] = [
         role: 'Director, Legal Department',
         getName: (r) => r.reviews.legal.reviewer ?? null,
         signed: (r) => r.reviews.legal.status.startsWith('Approved'),
-        bypassed: (r) => !!r.directToChairman && !r.reviews.legal.status.startsWith('Approved'),
+        bypassed: (r) =>
+          !!r.directToChairman && !r.directToChairman.chairmanApproved && !r.reviews.legal.status.startsWith('Approved'),
+        chairmanBypassed: (r) =>
+          !!r.directToChairman?.chairmanApproved && !r.reviews.legal.status.startsWith('Approved'),
         getTs: (r) =>
           r.reviews.legal.reviewedAt ??
           auditTs(r, 'Legal review approved') ??
@@ -74,7 +79,10 @@ export const SIG_TIERS: SigTier[] = [
         role: 'Director, Finance & Treasury',
         getName: (r) => r.reviews.finance.reviewer ?? null,
         signed: (r) => r.reviews.finance.status.startsWith('Approved'),
-        bypassed: (r) => !!r.directToChairman && !r.reviews.finance.status.startsWith('Approved'),
+        bypassed: (r) =>
+          !!r.directToChairman && !r.directToChairman.chairmanApproved && !r.reviews.finance.status.startsWith('Approved'),
+        chairmanBypassed: (r) =>
+          !!r.directToChairman?.chairmanApproved && !r.reviews.finance.status.startsWith('Approved'),
         getTs: (r) => r.reviews.finance.reviewedAt ?? auditTs(r, 'Finance review approved'),
       },
       {
@@ -83,7 +91,9 @@ export const SIG_TIERS: SigTier[] = [
         getName: (r) => r.reviews.compliance.reviewer ?? null,
         signed: (r) => r.reviews.compliance.status.startsWith('Approved'),
         bypassed: (r) =>
-          !!r.directToChairman && !r.reviews.compliance.status.startsWith('Approved'),
+          !!r.directToChairman && !r.directToChairman.chairmanApproved && !r.reviews.compliance.status.startsWith('Approved'),
+        chairmanBypassed: (r) =>
+          !!r.directToChairman?.chairmanApproved && !r.reviews.compliance.status.startsWith('Approved'),
         getTs: (r) =>
           r.reviews.compliance.reviewedAt ?? auditTs(r, 'Compliance review approved'),
       },
@@ -99,6 +109,7 @@ export const SIG_TIERS: SigTier[] = [
         getName: () => SEC_GGD_ENERGY,
         signed: () => false,
         bypassed: () => false,
+        chairmanBypassed: () => false,
         getTs: () => undefined,
       },
       {
@@ -107,6 +118,7 @@ export const SIG_TIERS: SigTier[] = [
         getName: () => SEC_GGD_FINANCE,
         signed: () => false,
         bypassed: () => false,
+        chairmanBypassed: () => false,
         getTs: () => undefined,
       },
     ],
@@ -121,6 +133,7 @@ export const SIG_TIERS: SigTier[] = [
         getName: () => SEC_LEGAL_COUNSEL,
         signed: () => false,
         bypassed: () => false,
+        chairmanBypassed: () => false,
         getTs: () => undefined,
       },
     ],
@@ -129,21 +142,24 @@ export const SIG_TIERS: SigTier[] = [
 
 export default function SignatureBlock({ reco }: { reco: Recommendation }) {
   const allSlots = SIG_TIERS.flatMap((t) => t.slots)
+  const clearedCount = allSlots.filter((s) => s.signed(reco) || s.chairmanBypassed(reco)).length
   const signedCount = allSlots.filter((s) => s.signed(reco)).length
   const total = allSlots.length
+
+  const chairmanApprovedAt = reco.directToChairman?.approvedAt
 
   return (
     <div className="space-y-3">
       <span
         className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-          signedCount === total
+          clearedCount === total
             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-            : signedCount === 0
+            : clearedCount === 0
             ? 'bg-surface-raised text-slate-400 border-border-subtle'
             : 'bg-brand-subtle text-brand border-brand/20'
         }`}
       >
-        {signedCount} of {total} signed
+        {signedCount} of {total} signed{clearedCount > signedCount ? ` · ${clearedCount - signedCount} authorised` : ''}
       </span>
 
       {SIG_TIERS.map((tier) => (
@@ -160,6 +176,7 @@ export default function SignatureBlock({ reco }: { reco: Recommendation }) {
             {tier.slots.map((slot) => {
               const isSigned = slot.signed(reco)
               const isBypassed = slot.bypassed(reco)
+              const isChairmanBypassed = slot.chairmanBypassed(reco)
               const name = isSigned ? slot.getName(reco) : null
               const ts = isSigned ? slot.getTs(reco) : undefined
 
@@ -170,6 +187,8 @@ export default function SignatureBlock({ reco }: { reco: Recommendation }) {
                   className={`flex items-start gap-2 px-2.5 py-1.5 rounded-lg border text-xs transition-all ${
                     isSigned
                       ? 'bg-emerald-50/60 border-emerald-200'
+                      : isChairmanBypassed
+                      ? 'bg-brand-subtle/60 border-brand/25'
                       : isBypassed
                       ? 'bg-amber-50/50 border-amber-200/80'
                       : 'border-dashed border-slate-200 bg-surface'
@@ -183,6 +202,14 @@ export default function SignatureBlock({ reco }: { reco: Recommendation }) {
                         transition={{ type: 'spring', stiffness: 400, damping: 18 }}
                       >
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                      </motion.div>
+                    ) : isChairmanBypassed ? (
+                      <motion.div
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-brand/60" />
                       </motion.div>
                     ) : (
                       <div
@@ -201,6 +228,13 @@ export default function SignatureBlock({ reco }: { reco: Recommendation }) {
                         </p>
                         <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">
                           {slot.role}{ts ? ` · ${fmtDate(ts)}` : ''}
+                        </p>
+                      </>
+                    ) : isChairmanBypassed ? (
+                      <>
+                        <p className="italic text-brand/70 leading-snug">{slot.role}</p>
+                        <p className="text-[10px] text-brand/60 mt-0.5">
+                          Authorised by Chairman{chairmanApprovedAt ? ` · ${fmtDate(chairmanApprovedAt)}` : ''}
                         </p>
                       </>
                     ) : (

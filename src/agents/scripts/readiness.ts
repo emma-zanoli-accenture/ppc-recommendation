@@ -28,7 +28,7 @@ All 11 content sections are present and complete. The mandatory draft resolution
 
 Score breakdown: content completeness 25/25, draft resolution 25/25, legal review 20/20, finance review 15/15, compliance review 15/15. No residual gaps.
 
-BoD deadline: 8 days remaining. Pack assembled: 6 documents.
+BoD deadline: within the current planning window. Pack assembled: 6 documents.
 
 Recommendation is Ready for BoD. The Corporate Secretary may now schedule the item on the Board agenda.`,
   structuredOutput: {

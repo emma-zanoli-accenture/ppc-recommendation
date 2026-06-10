@@ -1086,7 +1086,9 @@ function BUFeedbackView({
           {activeReviews.length === 0 ? (
             <div className="bg-surface border border-border-subtle rounded-xl p-6 text-center">
               <p className="text-slate-400 text-sm italic">
-                Reviews are in progress. Check back after the review functions complete their assessment.
+                {reco.directToChairman
+                  ? 'Sent directly to Chairman — standard review functions were bypassed.'
+                  : 'Reviews are in progress. Check back after the review functions complete their assessment.'}
               </p>
             </div>
           ) : (

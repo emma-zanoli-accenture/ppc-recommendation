@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   CheckCircle2,
   RotateCcw,
-  Bell,
   Clock,
   AlertTriangle,
 } from 'lucide-react'
@@ -25,8 +24,7 @@ import {
 } from '@/agents/scripts'
 import { daysUntil } from '@/lib/utils'
 import type { AgentScript } from '@/agents/engine'
-import type { ReviewFunction, Recommendation, RecommendationStatus } from '@/lib/types'
-import { statusColors } from '@/lib/statusColors'
+import type { ReviewFunction, Recommendation } from '@/lib/types'
 import type { LegalReviewOutput } from '@/agents/scripts/legalReview'
 import type { FinanceReviewOutput } from '@/agents/scripts/financeReview'
 import type { ComplianceReviewOutput } from '@/agents/scripts/complianceReview'
@@ -70,18 +68,6 @@ const FN_CONFIG: Record<Fn, FnConfig> = {
     reviewer: 'A. Nikolaou',
   },
 }
-
-const ALL_BUS = [
-  'All BUs',
-  'Procurement',
-  'IT',
-  'Finance/Treasury',
-  'Operations',
-  'ESG',
-  'Regulatory Affairs',
-  'HR',
-  'Legal/Compliance',
-]
 
 // ─── Comment generator (from agent structured output) ─────────────────────────
 
@@ -222,6 +208,240 @@ function ComplianceOutputPanel({ output }: { output: ComplianceReviewOutput }) {
   )
 }
 
+// ─── Priority helpers ─────────────────────────────────────────────────────────
+
+interface PriorityTag {
+  label: string
+  color: 'red' | 'amber' | 'emerald' | 'brand' | 'slate' | 'purple'
+}
+
+const TAG_CLS: Record<string, string> = {
+  red:     'bg-red-50 text-red-700 border-red-200',
+  amber:   'bg-amber-50 text-amber-700 border-amber-200',
+  emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  brand:   'bg-brand-subtle text-brand border-brand/20',
+  slate:   'bg-surface-raised text-slate-500 border-border-subtle',
+  purple:  'bg-agent-subtle text-agent border-agent/20',
+}
+
+function getPriorityScore(reco: Recommendation, fn: Fn): number {
+  const days = daysUntil(reco.bodDeadline)
+  let score = 0
+
+  if (days <= 3) score += 50
+  else if (days <= 7) score += 35
+  else if (days <= 14) score += 15
+  else if (days <= 21) score += 5
+
+  if (fn === 'legal') {
+    score += Math.min(reco.regulatoryRefs.length * 10, 25)
+    const othersActive =
+      (reco.reviews.finance.status !== 'Pending' ? 1 : 0) +
+      (reco.reviews.compliance.status !== 'Pending' ? 1 : 0)
+    score += othersActive * 5
+  }
+
+  if (fn === 'finance') {
+    if (reco.reviews.legal.status.startsWith('Approved')) score += 30
+    if (reco.regulatoryRefs.includes('EMIR')) score += 15
+    if (reco.businessUnit === 'Finance/Treasury') score += 10
+  }
+
+  if (fn === 'compliance') {
+    const lDone = reco.reviews.legal.status !== 'Pending' && reco.reviews.legal.status !== 'In Review'
+    const fDone = reco.reviews.finance.status !== 'Pending' && reco.reviews.finance.status !== 'In Review'
+    if (lDone && fDone) score += 40
+    else if (lDone || fDone) score += 20
+    if (reco.regulatoryRefs.length > 0) score += 10
+  }
+
+  return score
+}
+
+function getPriorityTags(reco: Recommendation, fn: Fn): PriorityTag[] {
+  const tags: PriorityTag[] = []
+  const days = daysUntil(reco.bodDeadline)
+
+  if (days <= 7) tags.push({ label: `BoD in ${days}d`, color: 'red' })
+  else if (days <= 14) tags.push({ label: `BoD in ${days}d`, color: 'amber' })
+
+  if (fn === 'legal') {
+    const regs = reco.regulatoryRefs.filter((r) =>
+      ['REMIT', 'EMIR', 'ACER', 'RAAEY'].includes(r)
+    )
+    if (regs.length > 0) tags.push({ label: regs.slice(0, 2).join(' · '), color: 'brand' })
+    const othersActive =
+      reco.reviews.finance.status !== 'Pending' ||
+      reco.reviews.compliance.status !== 'Pending'
+    if (othersActive) tags.push({ label: 'Parallel reviews active', color: 'slate' })
+  }
+
+  if (fn === 'finance') {
+    if (reco.reviews.legal.status.startsWith('Approved'))
+      tags.push({ label: 'Legal cleared', color: 'emerald' })
+    if (reco.regulatoryRefs.includes('EMIR'))
+      tags.push({ label: 'EMIR — derivatives', color: 'brand' })
+    if (reco.businessUnit === 'Finance/Treasury')
+      tags.push({ label: 'Own BU', color: 'slate' })
+  }
+
+  if (fn === 'compliance') {
+    const lDone =
+      reco.reviews.legal.status.startsWith('Approved') ||
+      reco.reviews.legal.status === 'Returned'
+    const fDone =
+      reco.reviews.finance.status.startsWith('Approved') ||
+      reco.reviews.finance.status === 'Returned'
+    if (lDone && fDone) tags.push({ label: 'Final gate', color: 'purple' })
+    else if (lDone) tags.push({ label: 'Legal cleared', color: 'emerald' })
+    else if (fDone) tags.push({ label: 'Finance cleared', color: 'emerald' })
+    if (reco.regulatoryRefs.length > 0)
+      tags.push({ label: 'Regulatory scope', color: 'brand' })
+  }
+
+  return tags.slice(0, 3)
+}
+
+function getNewestId(items: Recommendation[]): string | null {
+  if (items.length === 0) return null
+  return items.reduce((latest, r) => {
+    const ts = r.auditLog[r.auditLog.length - 1]?.timestamp ?? ''
+    const latestTs = latest.auditLog[latest.auditLog.length - 1]?.timestamp ?? ''
+    return ts > latestTs ? r : latest
+  }).id
+}
+
+// ─── Priority row ─────────────────────────────────────────────────────────────
+
+function PriorityRow({
+  reco,
+  rank,
+  fn,
+  isNewest,
+  onOpen,
+}: {
+  reco: Recommendation
+  rank: number
+  fn: Fn
+  isNewest: boolean
+  onOpen: () => void
+}) {
+  const tags = getPriorityTags(reco, fn)
+  const days = daysUntil(reco.bodDeadline)
+  const isTop = rank === 1
+  const otherFns = (['legal', 'finance', 'compliance'] as Fn[]).filter((f) => f !== fn)
+
+  const REVIEW_DOT: Record<string, string> = {
+    Pending: 'bg-slate-300',
+    'In Review': 'bg-blue-400',
+    Approved: 'bg-emerald-500',
+    'Approved with Conditions': 'bg-emerald-400',
+    'Approved with Note': 'bg-emerald-400',
+    Returned: 'bg-amber-400',
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.2, delay: (rank - 1) * 0.05 }}
+      className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer group ${
+        isTop
+          ? 'bg-brand-subtle/50 border-l-[3px] border-l-brand border-brand/25'
+          : 'bg-surface border-border-subtle hover:border-border-strong hover:bg-surface-raised/40'
+      }`}
+      onClick={onOpen}
+    >
+      {/* Rank */}
+      <div
+        className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${
+          rank === 1
+            ? 'bg-brand text-white'
+            : rank === 2
+            ? 'bg-brand/15 text-brand'
+            : 'bg-surface-raised text-slate-400'
+        }`}
+      >
+        {rank}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-0.5">
+          <p
+            className={`text-sm font-semibold truncate ${
+              isTop ? 'text-brand' : 'text-slate-800'
+            }`}
+          >
+            {reco.title}
+          </p>
+          {isNewest && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-brand text-white uppercase tracking-wide flex-shrink-0 leading-none">
+              New
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] text-slate-400">
+            {reco.businessUnit} · {reco.owner}
+          </span>
+          {tags.map((tag, i) => (
+            <span
+              key={i}
+              className={`text-[10px] font-medium px-1.5 py-0.5 rounded border leading-none ${TAG_CLS[tag.color]}`}
+            >
+              {tag.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Parallel reviewer dots */}
+      <div
+        className="flex-shrink-0 flex items-center gap-1.5"
+        title="Status of parallel reviewers"
+      >
+        {otherFns.map((f) => {
+          const status = reco.reviews[f].status
+          return (
+            <div key={f} className="flex items-center gap-0.5">
+              <div
+                className={`w-1.5 h-1.5 rounded-full ${REVIEW_DOT[status] ?? 'bg-slate-300'}`}
+                title={`${FN_CONFIG[f].label}: ${status}`}
+              />
+              <span className="text-[10px] text-slate-400">{FN_CONFIG[f].label[0]}</span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Deadline */}
+      <div
+        className={`flex-shrink-0 flex items-center gap-1 text-[11px] font-medium min-w-[36px] justify-end ${
+          days <= 7 ? 'text-red-600' : days <= 14 ? 'text-amber-600' : 'text-slate-400'
+        }`}
+      >
+        <Clock className="w-3 h-3" />
+        {days}d
+      </div>
+
+      {/* CTA */}
+      <div className="flex-shrink-0">
+        <span
+          className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 ${
+            isTop
+              ? 'bg-brand text-white group-hover:bg-brand-dim'
+              : 'bg-surface-raised text-slate-600 group-hover:bg-border-subtle group-hover:text-slate-800'
+          }`}
+        >
+          Review
+          <ChevronRight className="w-3 h-3" />
+        </span>
+      </div>
+    </motion.div>
+  )
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 function RFDashboard({
@@ -233,157 +453,118 @@ function RFDashboard({
   activeFn: Fn
   onView: (id: string) => void
 }) {
-  const [buFilter, setBuFilter] = useState('Procurement')
-  const [statusFilter, setStatusFilter] = useState<RecommendationStatus | 'All'>('All')
-
-  // Reset status filter when switching between Legal / Finance / Compliance tabs
-  useEffect(() => { setStatusFilter('All') }, [activeFn])
+  const [showCompleted, setShowCompleted] = useState(false)
 
   const fnCfg = FN_CONFIG[activeFn]
   const Icon = fnCfg.icon
 
-  // All items where this function has a non-Pending review
-  const myItems = recommendations.filter(
-    (r) => r.reviews[activeFn].status !== 'Pending'
-  )
+  const actionItems = recommendations
+    .filter((r) => r.reviews[activeFn].status === 'In Review')
+    .sort((a, b) => getPriorityScore(b, activeFn) - getPriorityScore(a, activeFn))
 
-  // Apply BU filter
-  const byBU =
-    buFilter === 'All BUs'
-      ? myItems
-      : myItems.filter((r) => r.businessUnit === buFilter)
+  const completedItems = recommendations.filter((r) => {
+    const s = r.reviews[activeFn].status
+    return s !== 'Pending' && s !== 'In Review'
+  })
 
-  // Derive status counts from reco.status (matches what's shown on cards)
-  const statusCounts = byBU.reduce<Record<string, number>>((acc, r) => {
-    acc[r.status] = (acc[r.status] ?? 0) + 1
-    return acc
-  }, {})
-
-  // Apply reco-level status filter
-  const displayed =
-    statusFilter === 'All'
-      ? byBU
-      : byBU.filter((r) => r.status === statusFilter)
-
-  // New items still awaiting this function's review
-  const newItems = byBU.filter((r) => r.reviews[activeFn].status === 'In Review')
-
-  // Available BU values from all recommendations (for filter pills)
-  const buValues = Array.from(new Set(recommendations.map((r) => r.businessUnit))).sort()
+  const newestId = getNewestId(actionItems)
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-800">
-          Reviewers
-        </h1>
+        <h1 className="text-2xl font-semibold text-slate-800">Reviewers</h1>
         <p className="text-slate-500 text-sm mt-1">Specialist review functions</p>
       </div>
 
-      {/* Notification banner */}
-      <AnimatePresence>
-        {newItems.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            className="bg-brand-subtle border border-brand/20 rounded-xl p-3 flex items-start gap-3"
-          >
-            <Bell className="w-4 h-4 text-brand mt-0.5 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-brand">
-                {newItems.length} new request{newItems.length > 1 ? 's' : ''} in your {fnCfg.label} review queue
-              </p>
-              <p className="text-xs text-slate-500 mt-0.5 truncate">
-                {newItems.map((r) => r.title).join(' · ')}
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* BU filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-slate-400 font-medium">BU:</span>
-        {['All BUs', ...buValues].map((bu) => (
-          <button
-            key={bu}
-            onClick={() => setBuFilter(bu)}
-            className={`text-xs px-3 py-1 rounded-full border font-medium transition-all ${
-              buFilter === bu
-                ? 'bg-brand text-white border-brand'
-                : 'border-border-subtle text-slate-500 hover:border-border-strong hover:text-slate-700'
-            }`}
-          >
-            {bu}
-          </button>
-        ))}
-      </div>
-
-      {/* Status filter — derived from actual reco statuses in queue */}
-      {Object.keys(statusCounts).length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-slate-400 font-medium">Status:</span>
-          <button
-            onClick={() => setStatusFilter('All')}
-            className={`text-xs px-3 py-1 rounded-full border font-medium transition-all ${
-              statusFilter === 'All'
-                ? 'bg-brand text-white border-brand'
-                : 'border-border-subtle text-slate-500 hover:border-border-strong hover:text-slate-700'
-            }`}
-          >
-            All ({byBU.length})
-          </button>
-          {Object.entries(statusCounts).map(([status, count]) => {
-            const c = statusColors[status as RecommendationStatus]
-            const active = statusFilter === status
-            return (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(active ? 'All' : status as RecommendationStatus)}
-                className={`text-xs px-3 py-1 rounded-full border font-medium transition-all ${
-                  active
-                    ? `${c.text} ${c.bg} ${c.border} ring-2 ring-current ring-offset-1`
-                    : `${c.text} bg-surface ${c.border} opacity-60 hover:opacity-100`
-                }`}
-              >
-                {count} · {status}
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Recommendations grid */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
-            <Icon className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-            {fnCfg.label} review queue
-            {statusFilter !== 'All' && <span className="ml-1.5 font-normal normal-case text-slate-400">· {statusFilter}</span>}
-            <span className="ml-2 text-slate-400 font-normal normal-case">({displayed.length})</span>
-          </h2>
+      {/* Priority worklist */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Icon className="w-4 h-4 text-slate-500" />
+            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+              {fnCfg.label} — needs your attention
+            </h2>
+          </div>
+          {actionItems.length > 0 && (
+            <span className="text-xs text-slate-400">
+              {actionItems.length} item{actionItems.length > 1 ? 's' : ''} · sorted by priority
+            </span>
+          )}
         </div>
 
-        {displayed.length === 0 ? (
-          <p className="text-slate-400 text-sm italic">
-            No items{statusFilter !== 'All' ? ` with status "${statusFilter}"` : ''}{buFilter !== 'All BUs' ? ` for ${buFilter}` : ''}.
-          </p>
+        {actionItems.length === 0 ? (
+          <div className="bg-surface border border-border-subtle rounded-xl p-6 text-center">
+            <CheckCircle2 className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
+            <p className="text-sm text-slate-500">
+              Queue is clear — no items awaiting your review.
+            </p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {displayed.map((r, i) => (
-              <div key={r.id} className="relative">
-                {r.reviews[activeFn].status === 'In Review' && (
-                  <span className="absolute -top-1.5 -right-1.5 z-10 bg-brand text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">
-                    New
-                  </span>
-                )}
-                <RecoCard recommendation={r} onClick={() => onView(r.id)} index={i} />
-              </div>
+          <div className="space-y-2">
+            {actionItems.map((r, idx) => (
+              <PriorityRow
+                key={r.id}
+                reco={r}
+                rank={idx + 1}
+                fn={activeFn}
+                isNewest={r.id === newestId}
+                onOpen={() => onView(r.id)}
+              />
             ))}
           </div>
         )}
       </div>
+
+      {/* Already reviewed */}
+      {completedItems.length > 0 && (
+        <div className="space-y-3">
+          <button
+            onClick={() => setShowCompleted((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <span
+              className={`inline-block transition-transform duration-150 ${
+                showCompleted ? 'rotate-90' : ''
+              }`}
+            >
+              ▶
+            </span>
+            Already reviewed by you ({completedItems.length})
+          </button>
+          <AnimatePresence>
+            {showCompleted && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                  {completedItems.map((r, i) => {
+                    const reviewStatus = r.reviews[activeFn].status
+                    return (
+                      <div key={r.id} className="relative">
+                        <RecoCard
+                          recommendation={r}
+                          onClick={() => onView(r.id)}
+                          index={i}
+                        />
+                        <span className={`absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full border pointer-events-none ${
+                          reviewStatus === 'Approved'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                          {reviewStatus === 'Approved' ? '✓ Reviewed' : '↩ Returned'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   )
 }
@@ -497,6 +678,29 @@ function RFReviewView({
         <span className="text-slate-300">/</span>
         <span className="text-sm font-medium text-slate-600">{fnCfg.label} Review</span>
       </div>
+
+      {/* Already-reviewed banner — full-width, shown before the 2-col layout */}
+      {alreadyReviewed && (
+        <div className={`rounded-xl px-4 py-3 border flex items-center gap-3 ${
+          currentReview?.status === 'Approved'
+            ? 'bg-emerald-50 border-emerald-200'
+            : 'bg-amber-50 border-amber-200'
+        }`}>
+          {currentReview?.status === 'Approved' ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+          ) : (
+            <RotateCcw className="w-4 h-4 text-amber-500 flex-shrink-0" />
+          )}
+          <p className={`text-sm font-medium ${
+            currentReview?.status === 'Approved' ? 'text-emerald-700' : 'text-amber-700'
+          }`}>
+            {currentReview?.status === 'Approved'
+              ? `${fnCfg.label} review submitted — Approved.`
+              : `${fnCfg.label} review submitted — Returned for update.`}
+            {' '}This record is read-only.
+          </p>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
@@ -786,7 +990,7 @@ export default function ReviewFunctions() {
 
       <AnimatePresence mode="wait">
         {rfView === 'dashboard' && (
-          <motion.div key="rf-dashboard" {...PAGE}>
+          <motion.div key={`rf-dashboard-${activeFn}`} {...PAGE}>
             <RFDashboard
               recommendations={recommendations}
               activeFn={activeFn}
