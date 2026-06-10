@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
@@ -43,6 +43,14 @@ const PAGE = {
 }
 
 const PIPELINE_STATUSES: RecommendationStatus[] = [
+  'Submitted to Chairman',
+  'Ready for BoD',
+  'Submitted to BoD',
+]
+
+// Statuses visible in the Chairman's dashboard (used to scope the Stats panel)
+const CHAIRMAN_SCOPE: RecommendationStatus[] = [
+  'All Reviews Completed',
   'Submitted to Chairman',
   'Ready for BoD',
   'Submitted to BoD',
@@ -542,9 +550,10 @@ const STATUS_ORDER: RecommendationStatus[] = [
 ]
 
 function StatsPanel({ recommendations }: { recommendations: Recommendation[] }) {
+  // recommendations is pre-filtered to CHAIRMAN_SCOPE — only items visible in this dashboard
   const total = recommendations.length
 
-  // Pipeline funnel
+  // Pipeline funnel (only Chairman stages)
   const funnel = STATUS_ORDER
     .map((s) => ({ status: s, count: recommendations.filter((r) => r.status === s).length }))
     .filter((s) => s.count > 0)
@@ -555,14 +564,13 @@ function StatsPanel({ recommendations }: { recommendations: Recommendation[] }) 
   const urgent  = active.filter((r) => { const d = daysUntil(r.bodDeadline); return d > 0 && d <= 7 }).length
   const onTrack = active.filter((r) => daysUntil(r.bodDeadline) > 7).length
 
-  // Review bottleneck — items currently Under Review
-  const inReview = recommendations.filter((r) => r.status === 'Under Review')
-  const bottleneck = [
-    { fn: 'Legal',      count: inReview.filter((r) => r.reviews.legal.status      === 'In Review').length },
-    { fn: 'Finance',    count: inReview.filter((r) => r.reviews.finance.status    === 'In Review').length },
-    { fn: 'Compliance', count: inReview.filter((r) => r.reviews.compliance.status === 'In Review').length },
-  ]
-  const maxBottleneck = Math.max(...bottleneck.map((b) => b.count), 1)
+  // By Board Meeting — all scoped items grouped by meeting date
+  const meetingGroups = Object.entries(
+    recommendations.reduce<Record<string, number>>((acc, r) => {
+      acc[r.boardMeetingDate] = (acc[r.boardMeetingDate] ?? 0) + 1
+      return acc
+    }, {})
+  ).sort(([a], [b]) => a.localeCompare(b))
 
   // Business unit breakdown
   const byBU = Object.entries(
@@ -573,114 +581,122 @@ function StatsPanel({ recommendations }: { recommendations: Recommendation[] }) 
   ).sort((a, b) => b[1] - a[1])
   const maxBU = byBU[0]?.[1] ?? 1
 
-  // Avg readiness (items that have been assessed)
-  const assessed = recommendations.filter((r) => r.readinessScore > 0)
+  // Avg readiness — scoped to PIPELINE_STATUSES only (items that have had a Readiness Agent run),
+  // matching the header meter so the same number appears in both places
+  const assessed = recommendations.filter((r) => PIPELINE_STATUSES.includes(r.status) && r.readinessScore > 0)
   const avgReadiness = assessed.length
     ? Math.round(assessed.reduce((sum, r) => sum + r.readinessScore, 0) / assessed.length)
     : null
 
-  // Next board meeting
-  const nextMeeting = recommendations[0]?.boardMeetingDate ?? '—'
+  // Next upcoming board meeting among scoped items
+  const upcomingDates = [...new Set(
+    recommendations.map((r) => r.boardMeetingDate).filter((d) => daysUntil(d) >= 0)
+  )].sort()
+  const nextMeeting = upcomingDates[0] ?? recommendations[0]?.boardMeetingDate ?? '—'
   const onAgenda = recommendations.filter((r) => r.status === 'Submitted to BoD').length
 
+  const statTile = (label: string, value: React.ReactNode, sub?: string) => (
+    <div className="bg-surface border border-border-subtle rounded-xl p-3">
+      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">{label}</p>
+      <p className="text-2xl font-bold text-slate-800 mt-1">{value}</p>
+      {sub && <p className="text-[10px] text-slate-400 mt-0.5">{sub}</p>}
+    </div>
+  )
+
   return (
-    <div className="bg-surface-raised border border-border-subtle rounded-2xl p-5 space-y-5">
-      {/* Top summary strip */}
-      <div className="flex items-center gap-6 pb-4 border-b border-border-subtle">
-        <div>
-          <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Total tracked</p>
-          <p className="text-2xl font-bold text-slate-800 mt-0.5">{total}</p>
-        </div>
-        <div>
+    <div className="space-y-6">
+      {/* Summary tiles — 2×2 */}
+      <div className="grid grid-cols-2 gap-3">
+        {statTile('Total in scope', total)}
+        {statTile('On BoD agenda', <span className="text-green-600">{onAgenda}</span>)}
+        <div className="bg-surface border border-border-subtle rounded-xl p-3">
           <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Next board meeting</p>
-          <p className="text-sm font-semibold text-slate-700 mt-0.5">{nextMeeting}</p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">On BoD agenda</p>
-          <p className="text-2xl font-bold text-green-600 mt-0.5">{onAgenda}</p>
+          <p className="text-sm font-semibold text-slate-700 mt-1.5">{nextMeeting}</p>
         </div>
         {avgReadiness !== null && (
-          <div className="ml-auto">
+          <div className="bg-surface border border-border-subtle rounded-xl p-3">
             <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Avg readiness</p>
-            <p className={`text-2xl font-bold mt-0.5 ${avgReadiness >= 90 ? 'text-emerald-600' : avgReadiness >= 70 ? 'text-amber-600' : 'text-red-500'}`}>
+            <p className={`text-2xl font-bold mt-1 ${avgReadiness >= 90 ? 'text-emerald-600' : avgReadiness >= 70 ? 'text-amber-600' : 'text-red-500'}`}>
               {avgReadiness}<span className="text-sm font-normal text-slate-400">/100</span>
             </p>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Column 1: Pipeline funnel */}
-        <div className="space-y-2">
-          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Pipeline Funnel</p>
+      {/* Deadline health */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Deadline Health</p>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-red-600">{overdue}</p>
+            <p className="text-[10px] text-red-500 mt-0.5">Overdue</p>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-amber-600">{urgent}</p>
+            <p className="text-[10px] text-amber-500 mt-0.5">Due ≤7d</p>
+          </div>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
+            <p className="text-2xl font-bold text-emerald-600">{onTrack}</p>
+            <p className="text-[10px] text-emerald-500 mt-0.5">On track</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Pipeline funnel */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Pipeline Funnel</p>
+        <div className="space-y-2.5">
           {funnel.map(({ status, count }) => {
             const c = statusColors[status]
             return (
-              <div key={status} className="flex items-center gap-2">
+              <div key={status} className="flex items-center gap-3">
                 <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.dot }} />
-                <span className="text-xs text-slate-600 flex-1 truncate">{status}</span>
-                <div className="w-16 h-1.5 bg-surface rounded-full overflow-hidden flex-shrink-0">
+                <span className="text-xs text-slate-600 w-40 truncate">{status}</span>
+                <div className="flex-1 h-1.5 bg-surface-raised rounded-full overflow-hidden">
                   <div className="h-full rounded-full" style={{ width: `${(count / total) * 100}%`, backgroundColor: c.dot }} />
                 </div>
-                <span className={`text-xs font-bold w-4 text-right ${c.text}`}>{count}</span>
+                <span className={`text-xs font-bold w-4 text-right flex-shrink-0 ${c.text}`}>{count}</span>
               </div>
             )
           })}
         </div>
+      </div>
 
-        {/* Column 2: Deadline health + review bottleneck */}
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Deadline Health</p>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-red-50 border border-red-200 rounded-xl p-2.5 text-center">
-                <p className="text-xl font-bold text-red-600">{overdue}</p>
-                <p className="text-[10px] text-red-500 mt-0.5">Overdue</p>
-              </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-center">
-                <p className="text-xl font-bold text-amber-600">{urgent}</p>
-                <p className="text-[10px] text-amber-500 mt-0.5">Due ≤7d</p>
-              </div>
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-center">
-                <p className="text-xl font-bold text-emerald-600">{onTrack}</p>
-                <p className="text-[10px] text-emerald-500 mt-0.5">On track</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Review Bottleneck</p>
-            {bottleneck.map(({ fn, count }) => (
-              <div key={fn} className="flex items-center gap-2">
-                <span className="text-xs text-slate-600 w-20">{fn}</span>
-                <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-blue-400"
-                    style={{ width: `${(count / maxBottleneck) * 100}%` }}
-                  />
+      {/* By board meeting */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">By Board Meeting</p>
+        <div className="space-y-3">
+          {meetingGroups.map(([date, count]) => {
+            const d = daysUntil(date)
+            const barColor = d < 0 ? 'bg-red-400' : d <= 7 ? 'bg-amber-400' : 'bg-emerald-400'
+            const textColor = d < 0 ? 'text-red-600' : d <= 7 ? 'text-amber-600' : 'text-emerald-600'
+            const label = d < 0 ? `${Math.abs(d)}d overdue` : d === 0 ? 'Today' : `in ${d}d`
+            return (
+              <div key={date} className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-slate-700">{date}</span>
+                  <span className={`text-[10px] font-semibold ${textColor}`}>{label} · {count} item{count !== 1 ? 's' : ''}</span>
                 </div>
-                <span className="text-xs font-bold text-slate-700 w-4 text-right">{count}</span>
+                <div className="h-1.5 bg-surface-raised rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${barColor}`} style={{ width: `${(count / total) * 100}%` }} />
+                </div>
               </div>
-            ))}
-            {inReview.length === 0 && (
-              <p className="text-xs text-slate-400 italic">No items currently under review.</p>
-            )}
-          </div>
+            )
+          })}
         </div>
+      </div>
 
-        {/* Column 3: Business unit breakdown */}
-        <div className="space-y-2">
-          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">By Business Unit</p>
+      {/* By business unit */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">By Business Unit</p>
+        <div className="space-y-2.5">
           {byBU.map(([bu, count]) => (
-            <div key={bu} className="flex items-center gap-2">
-              <span className="text-xs text-slate-600 w-28 truncate">{bu}</span>
-              <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-brand/40"
-                  style={{ width: `${(count / maxBU) * 100}%` }}
-                />
+            <div key={bu} className="flex items-center gap-3">
+              <span className="text-xs text-slate-600 w-36 truncate">{bu}</span>
+              <div className="flex-1 h-1.5 bg-surface-raised rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-brand/50" style={{ width: `${(count / maxBU) * 100}%` }} />
               </div>
-              <span className="text-xs font-bold text-slate-700 w-4 text-right">{count}</span>
+              <span className="text-xs font-bold text-slate-700 w-4 text-right flex-shrink-0">{count}</span>
             </div>
           ))}
         </div>
@@ -844,11 +860,7 @@ function SecDashboard({
   const [statusFilter, setStatusFilter] = useState<RecommendationStatus | 'All'>('All')
   const [statsOpen, setStatsOpen] = useState(false)
 
-  const pipelineItems = recommendations.filter((r) => PIPELINE_STATUSES.includes(r.status))
   const awaitingItems = recommendations.filter((r) => r.status === 'All Reviews Completed')
-
-  const scores = pipelineItems.map((r) => r.readinessScore).filter((s) => s > 0)
-  const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0
 
   const buValues = Array.from(new Set(recommendations.map((r) => r.businessUnit))).sort()
 
@@ -896,41 +908,14 @@ function SecDashboard({
           <h1 className="text-2xl font-semibold text-slate-800">Chairman</h1>
           <p className="text-slate-500 text-sm mt-1">Control tower · BoD submission pipeline</p>
         </div>
-        <div className="flex items-center gap-3">
-          {avgScore > 0 && (
-            <div className="flex flex-col items-center">
-              <ReadinessMeter score={avgScore} size="md" showLabel />
-              <p className="text-xs text-slate-400 mt-1">Avg readiness</p>
-            </div>
-          )}
-          <button
-            onClick={() => setStatsOpen((v) => !v)}
-            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border transition-all ${
-              statsOpen
-                ? 'bg-brand text-white border-brand shadow-sm'
-                : 'text-slate-500 border-border-subtle hover:bg-surface-raised'
-            }`}
-          >
-            <BarChart2 className="w-3.5 h-3.5" />
-            Stats
-          </button>
-        </div>
+        <button
+          onClick={() => setStatsOpen(true)}
+          className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 border border-border-subtle rounded-lg px-2.5 py-1.5 hover:bg-surface-raised transition-colors"
+        >
+          <BarChart2 className="w-3.5 h-3.5" />
+          Stats
+        </button>
       </div>
-
-      {/* Stats panel */}
-      <AnimatePresence>
-        {statsOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.22 }}
-            className="overflow-hidden"
-          >
-            <StatsPanel recommendations={recommendations} />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* BU filter */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -1010,6 +995,45 @@ function SecDashboard({
           </p>
         )}
       </div>
+
+      {/* Stats drawer — slides in from the right, leaves main content untouched */}
+      <AnimatePresence>
+        {statsOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm"
+              onClick={() => setStatsOpen(false)}
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed right-0 top-0 bottom-0 z-50 w-[460px] bg-surface border-l border-border-subtle shadow-2xl overflow-y-auto"
+            >
+              <div className="p-5 space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-border-subtle">
+                  <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    <BarChart2 className="w-4 h-4 text-brand" />
+                    Pipeline Overview
+                  </h2>
+                  <button
+                    onClick={() => setStatsOpen(false)}
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <StatsPanel recommendations={recommendations.filter((r) => CHAIRMAN_SCOPE.includes(r.status))} />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

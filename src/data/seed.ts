@@ -3,6 +3,14 @@ import type { Recommendation, ReviewState } from '@/lib/types'
 export const BOARD_MEETING_DATE = '2026-07-22'
 export const BOD_DEADLINE = '2026-07-20'
 
+// June sprint meeting — deadline 5 days from demo anchor (urgent bucket)
+export const SPRINT_BOARD_MEETING_DATE = '2026-06-16'
+export const SPRINT_BOD_DEADLINE = '2026-06-12'
+
+// Missed / overdue items — deadline is before the demo anchor
+export const OVERDUE_BOARD_MEETING_DATE = '2026-06-03'
+export const OVERDUE_BOD_DEADLINE = '2026-06-01'
+
 const PENDING: ReviewState = { status: 'Pending', comments: [] }
 const IN_REVIEW: ReviewState = { status: 'In Review', comments: [] }
 
@@ -398,6 +406,343 @@ export const seedRecommendations: Recommendation[] = [
     readinessScore: 0,
     auditLog: [
       { id: crypto.randomUUID(), timestamp: '2026-06-01T14:00:00Z', actor: 'D. Papadopoulos', role: 'Procurement', action: 'Created recommendation' },
+    ],
+  },
+
+  // 12 — Under Review | HR | OVERDUE (missed June sprint deadline)
+  {
+    id: 'seed-012',
+    title: 'Collective Labour Agreement Renewal 2026–2028',
+    businessNeed:
+      'The current Collective Labour Agreement (CLA) covering approximately 4,200 PPC employees expires on 31 December 2026. Board-level approval is required to authorise management to enter into renewal negotiations with union representatives and agree the remuneration envelope for 2026–2028.',
+    businessUnit: 'HR',
+    owner: 'F. Antoniadou',
+    status: 'Under Review',
+    createdAt: '2026-04-10T09:00:00Z',
+    boardMeetingDate: OVERDUE_BOARD_MEETING_DATE,
+    bodDeadline: OVERDUE_BOD_DEADLINE,
+    regulatoryRefs: ['L.1876/1990 (National CLA Framework)', 'Hellenic Corporate Governance Code 2021'],
+    contentSections: [
+      { id: 's1', title: 'Current Agreement', body: 'Three-year CLA signed January 2024, covering 4,200 employees across generation, distribution, and corporate functions.' },
+      { id: 's2', title: 'Negotiation Mandate', body: 'Proposed envelope: base salary COLA 3.5% + performance bonus restructuring linked to ESG targets.' },
+      { id: 's3', title: 'Financial Impact', body: 'Estimated incremental cost EUR 8.2M p.a. over three years. Within approved HR budget headroom.' },
+    ],
+    draftResolution:
+      'The Board of Directors of PPC S.A. authorises management to enter into negotiations for the renewal of the Collective Labour Agreement for 2026–2028, within the financial parameters approved by the Remuneration Committee, and to execute the agreement upon completion of negotiations.',
+    reviews: {
+      legal: IN_REVIEW,
+      finance: approved('K. Economou', '2026-05-12T10:00:00Z'),
+      compliance: IN_REVIEW,
+    },
+    readinessScore: 48,
+    auditLog: [
+      { id: crypto.randomUUID(), timestamp: '2026-04-10T09:00:00Z', actor: 'F. Antoniadou', role: 'HR', action: 'Created recommendation' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-05T10:00:00Z', actor: 'F. Antoniadou', role: 'HR', action: 'Sent for review', detail: 'Sent to Legal, Finance, Compliance' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-12T10:00:00Z', actor: 'K. Economou', role: 'Finance', action: 'Finance review approved' },
+    ],
+  },
+
+  // 13 — Returned for Update | IT | OVERDUE (missed June sprint deadline)
+  {
+    id: 'seed-013',
+    title: 'Cybersecurity Incident Response Plan — ISO 27001 Alignment',
+    businessNeed:
+      'Following the mandatory ISO 27001:2022 recertification audit in March 2026, PPC\'s Cybersecurity Incident Response Plan (CIRP) must be updated to address three non-conformities identified by the external auditor: insufficient OT/ICS coverage, missing third-party notification SLAs, and absence of a Board-level escalation pathway for Tier-1 incidents.',
+    businessUnit: 'IT',
+    owner: 'G. Alexiou',
+    status: 'Returned for Update',
+    createdAt: '2026-04-20T11:00:00Z',
+    boardMeetingDate: OVERDUE_BOARD_MEETING_DATE,
+    bodDeadline: OVERDUE_BOD_DEADLINE,
+    regulatoryRefs: ['ISO 27001:2022', 'NIS2 Directive 2022/2555', 'ENISA ICS Security Guidelines'],
+    contentSections: [
+      { id: 's1', title: 'Non-Conformity Summary', body: 'Audit finding AF-2026-07: OT/ICS environments not covered by CIRP scope. AF-2026-08: No SLAs for third-party notification. AF-2026-09: Missing Board escalation pathway.' },
+      { id: 's2', title: 'Proposed Updates', body: 'Extend CIRP scope to SCADA/DCS systems at all generation sites. Define 72-hour third-party notification SLA. Add Board escalation matrix for Tier-1 incidents.' },
+    ],
+    draftResolution:
+      'The Board of Directors of PPC S.A. approves the updated Cybersecurity Incident Response Plan (v3.1) incorporating ISO 27001:2022 non-conformity resolutions, and establishes the Board-level escalation pathway for Tier-1 cybersecurity incidents effective immediately.',
+    reviews: {
+      legal: PENDING,
+      finance: PENDING,
+      compliance: returned(
+        'A. Nikolaou',
+        'The updated CIRP does not address the regulatory notification obligations under NIS2 Art. 23 (early warning within 24 hours, full notification within 72 hours to ENISA/national CSIRT). Please add a section on competent authority notifications and revise the incident classification to align with the NIS2 severity scale. Returning for update.'
+      ),
+    },
+    readinessScore: 28,
+    auditLog: [
+      { id: crypto.randomUUID(), timestamp: '2026-04-20T11:00:00Z', actor: 'G. Alexiou', role: 'IT', action: 'Created recommendation' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-08T09:00:00Z', actor: 'G. Alexiou', role: 'IT', action: 'Sent for review', detail: 'Sent to Compliance' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-20T15:00:00Z', actor: 'A. Nikolaou', role: 'Compliance', action: 'Returned for update', detail: 'NIS2 Art. 23 notification obligations missing' },
+    ],
+  },
+
+  // 14 — Submitted to BoD | Finance/Treasury | July meeting
+  {
+    id: 'seed-014',
+    title: 'Corporate Headquarters Lease Extension — 3 Chalkokondyli St., Athens',
+    businessNeed:
+      'The lease agreement for PPC\'s corporate headquarters at 3 Chalkokondyli Street, Athens expires on 31 December 2026. Board approval is required for a five-year extension to ensure operational continuity and lock in current market-rate terms before the anticipated 2027 Athens CBD rent cycle uplift.',
+    businessUnit: 'Finance/Treasury',
+    owner: 'C. Papadimitriou',
+    status: 'Submitted to BoD',
+    createdAt: '2026-01-15T10:00:00Z',
+    boardMeetingDate: BOARD_MEETING_DATE,
+    bodDeadline: BOD_DEADLINE,
+    regulatoryRefs: ['Hellenic Corporate Governance Code 2021', 'IFRS 16 (Leases)'],
+    contentSections: [
+      { id: 's1', title: 'Lease Overview', body: 'Current lease: 15,200 sqm, EUR 1.85M p.a. Proposed extension: 5 years (2027–2031), EUR 1.92M p.a. (+3.8% step-up Year 3).' },
+      { id: 's2', title: 'Market Analysis', body: 'Independent valuation confirms EUR 1.92M is at market. Athens CBD vacancy rate 4.2%; no equivalent alternative at comparable cost.' },
+      { id: 's3', title: 'Financial Impact', body: 'IFRS 16 right-of-use asset: EUR 9.2M. Lease liability: EUR 9.2M. No material P&L impact vs. current terms.' },
+    ],
+    draftResolution:
+      'The Board of Directors of PPC S.A. approves the extension of the lease agreement for the corporate headquarters at 3 Chalkokondyli Street, Athens, for a period of five years commencing 1 January 2027, on the commercial terms set out herein, and authorises the CEO to execute all related documentation.',
+    reviews: {
+      legal: approved('M. Stavrou', '2026-02-18T11:00:00Z'),
+      finance: approved('K. Economou', '2026-02-20T14:00:00Z'),
+      compliance: approved('A. Nikolaou', '2026-02-22T09:00:00Z'),
+    },
+    readinessScore: 95,
+    bodPackItems: [
+      'Board Memorandum',
+      'Draft Board Resolution',
+      'Independent Valuation Report',
+      'Legal Review Summary',
+      'IFRS 16 Impact Note',
+      'Draft Lease Extension Agreement',
+    ],
+    auditLog: [
+      { id: crypto.randomUUID(), timestamp: '2026-01-15T10:00:00Z', actor: 'C. Papadimitriou', role: 'Finance/Treasury', action: 'Created recommendation' },
+      { id: crypto.randomUUID(), timestamp: '2026-02-10T09:00:00Z', actor: 'C. Papadimitriou', role: 'Finance/Treasury', action: 'Sent for review' },
+      { id: crypto.randomUUID(), timestamp: '2026-02-22T09:00:00Z', actor: 'System', role: 'System', action: 'Status changed', detail: 'All Reviews Completed' },
+      { id: crypto.randomUUID(), timestamp: '2026-03-01T10:00:00Z', actor: 'C. Papadimitriou', role: 'Finance/Treasury', action: 'Submitted to Chairman' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-10T14:00:00Z', actor: 'P. Georgiou', role: 'Chairman', action: 'Readiness check completed', detail: 'Score: 95/100. BoD pack assembled.' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-15T10:00:00Z', actor: 'P. Georgiou', role: 'Chairman', action: 'Submitted to BoD' },
+    ],
+  },
+
+  // 15 — Submitted to BoD | ESG | July meeting
+  {
+    id: 'seed-015',
+    title: 'Biodiversity Net Gain Policy — Renewable Energy Development Sites',
+    businessNeed:
+      'PPC\'s accelerated renewable energy pipeline (5.2 GW by 2030) will require environmental impact assessments across 38 new sites. Board adoption of a Biodiversity Net Gain (BNG) Policy aligned with the EU Biodiversity Strategy 2030 and EU Nature Restoration Regulation is required to pre-empt regulatory requirements and satisfy ESG investor screening criteria.',
+    businessUnit: 'ESG',
+    owner: 'I. Papadaki',
+    status: 'Submitted to BoD',
+    createdAt: '2026-02-10T10:00:00Z',
+    boardMeetingDate: BOARD_MEETING_DATE,
+    bodDeadline: BOD_DEADLINE,
+    regulatoryRefs: ['EU Nature Restoration Regulation 2023/1115', 'EU Biodiversity Strategy 2030', 'ESRS E4 (Biodiversity)'],
+    contentSections: [
+      { id: 's1', title: 'Policy Scope', body: 'Applies to all new and refurbished generation sites >1 MW. Minimum 10% BNG required on all developments from 2027.' },
+      { id: 's2', title: 'Implementation Framework', body: 'Habitat baseline surveys, mitigation hierarchy, biodiversity credits for unavoidable impacts. Reporting via ESRS E4 from FY2026.' },
+      { id: 's3', title: 'Financial Impact', body: 'Estimated EUR 1.2M additional survey and mitigation cost p.a. Funded via environmental provision. Avoids potential permit delays valued at EUR 40–60M in project NPV.' },
+    ],
+    draftResolution:
+      'The Board of Directors of PPC S.A. adopts the PPC Biodiversity Net Gain Policy effective 1 January 2027, applicable to all new and refurbished generation developments above 1 MW, and directs management to integrate BNG requirements into the Group\'s project development and EIA processes.',
+    reviews: {
+      legal: approved('M. Stavrou', '2026-03-10T11:00:00Z'),
+      finance: approved('K. Economou', '2026-03-12T14:00:00Z'),
+      compliance: approved('A. Nikolaou', '2026-03-14T09:00:00Z'),
+    },
+    readinessScore: 96,
+    bodPackItems: [
+      'Board Memorandum',
+      'Draft Board Resolution',
+      'BNG Policy Document',
+      'Legal Review Summary',
+      'Compliance Clearance',
+      'ESRS E4 Disclosure Framework',
+    ],
+    auditLog: [
+      { id: crypto.randomUUID(), timestamp: '2026-02-10T10:00:00Z', actor: 'I. Papadaki', role: 'ESG', action: 'Created recommendation' },
+      { id: crypto.randomUUID(), timestamp: '2026-03-01T09:00:00Z', actor: 'I. Papadaki', role: 'ESG', action: 'Sent for review' },
+      { id: crypto.randomUUID(), timestamp: '2026-03-14T09:00:00Z', actor: 'System', role: 'System', action: 'Status changed', detail: 'All Reviews Completed' },
+      { id: crypto.randomUUID(), timestamp: '2026-03-20T10:00:00Z', actor: 'I. Papadaki', role: 'ESG', action: 'Submitted to Chairman' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-05T14:00:00Z', actor: 'P. Georgiou', role: 'Chairman', action: 'Readiness check completed', detail: 'Score: 96/100. BoD pack assembled.' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-08T10:00:00Z', actor: 'P. Georgiou', role: 'Chairman', action: 'Submitted to BoD' },
+    ],
+  },
+
+  // 16 — All Reviews Completed | Regulatory Affairs | July meeting
+  {
+    id: 'seed-016',
+    title: 'ACER REMIT Annual Supervision Report FY2025 — Board Acknowledgement',
+    businessNeed:
+      'ACER has published its REMIT Supervision Report for FY2025, which includes a specific reference to PPC\'s market conduct during the January 2025 Greek spot price spike. Board formal acknowledgement of the report and approval of management\'s response is required before the regulatory response deadline of 30 July 2026.',
+    businessUnit: 'Regulatory Affairs',
+    owner: 'E. Theodoridis',
+    status: 'All Reviews Completed',
+    createdAt: '2026-04-25T09:00:00Z',
+    boardMeetingDate: BOARD_MEETING_DATE,
+    bodDeadline: BOD_DEADLINE,
+    regulatoryRefs: ['REMIT Art. 15', 'ACER REMIT Supervision Report FY2025', 'RAAEY Circular 8/2026'],
+    contentSections: [
+      { id: 's1', title: 'Report Summary', body: 'ACER report flags PPC\'s generation dispatch during the January 2025 cold snap. ACER notes possible withholding of capacity but does not open a formal investigation. Monitoring continues.' },
+      { id: 's2', title: 'Management Response', body: 'Legal & Regulatory Affairs concludes dispatch was within REMIT-compliant operational parameters. Response letter prepared citing unit availability constraints and RAAEY emergency directions.' },
+      { id: 's3', title: 'Remedial Actions', body: 'Enhanced REMIT transaction reporting for capacity withholding scenarios. Updated insider list procedures. Additional ACER liaison officer appointed.' },
+    ],
+    draftResolution:
+      'The Board of Directors of PPC S.A. acknowledges the ACER REMIT Supervision Report FY2025, approves the management response as set out in the attached letter, and endorses the remedial actions package to be submitted to ACER and RAAEY by 30 July 2026.',
+    reviews: {
+      legal: approved('M. Stavrou', '2026-05-28T11:00:00Z'),
+      finance: approved('K. Economou', '2026-05-30T10:00:00Z'),
+      compliance: approved('A. Nikolaou', '2026-06-02T09:00:00Z'),
+    },
+    readinessScore: 77,
+    auditLog: [
+      { id: crypto.randomUUID(), timestamp: '2026-04-25T09:00:00Z', actor: 'E. Theodoridis', role: 'Regulatory Affairs', action: 'Created recommendation' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-15T09:00:00Z', actor: 'E. Theodoridis', role: 'Regulatory Affairs', action: 'Sent for review' },
+      { id: crypto.randomUUID(), timestamp: '2026-06-02T09:00:00Z', actor: 'System', role: 'System', action: 'Status changed', detail: 'All Reviews Completed' },
+    ],
+  },
+
+  // 17 — All Reviews Completed | IT | URGENT (5 days to sprint deadline — Chairman must act)
+  {
+    id: 'seed-017',
+    title: 'ERP Migration to SAP S/4HANA — Roadmap & Business Case Approval',
+    businessNeed:
+      'PPC\'s current SAP ECC 6.0 platform reaches end of mainstream maintenance in December 2027. Board approval of the S/4HANA migration roadmap and EUR 42M business case is required to begin vendor selection and internal mobilisation in Q3 2026, ahead of the 18-month implementation timeline.',
+    businessUnit: 'IT',
+    owner: 'G. Alexiou',
+    status: 'All Reviews Completed',
+    createdAt: '2026-05-05T09:00:00Z',
+    boardMeetingDate: SPRINT_BOARD_MEETING_DATE,
+    bodDeadline: SPRINT_BOD_DEADLINE,
+    regulatoryRefs: ['GDPR Art. 25 (Privacy by Design)', 'NIS2 Directive 2022/2555'],
+    contentSections: [
+      { id: 's1', title: 'Migration Scope', body: 'Full ERP migration: FI/CO, MM, PM, HR modules. Cloud-hosted on SAP RISE. Phased rollout: Core Finance Q4 2026, Operations Q2 2027, HR Q4 2027.' },
+      { id: 's2', title: 'Business Case', body: 'Total cost EUR 42M over 24 months. Expected efficiency savings EUR 6.5M p.a. from Year 3. Payback period: 6.5 years.' },
+    ],
+    draftResolution:
+      'The Board of Directors of PPC S.A. approves the SAP S/4HANA Migration Programme at a total investment of EUR 42M, authorises management to commence vendor selection and programme mobilisation, and delegates to the CTO authority to execute implementation contracts up to EUR 15M per tranche.',
+    reviews: {
+      legal: approved('M. Stavrou', '2026-06-01T14:00:00Z'),
+      finance: approved('K. Economou', '2026-06-02T10:00:00Z'),
+      compliance: approved('A. Nikolaou', '2026-06-03T09:00:00Z'),
+    },
+    readinessScore: 55,
+    auditLog: [
+      { id: crypto.randomUUID(), timestamp: '2026-05-05T09:00:00Z', actor: 'G. Alexiou', role: 'IT', action: 'Created recommendation' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-20T10:00:00Z', actor: 'G. Alexiou', role: 'IT', action: 'Sent for review', detail: 'Sent to Legal, Finance, Compliance' },
+      { id: crypto.randomUUID(), timestamp: '2026-06-01T14:00:00Z', actor: 'M. Stavrou', role: 'Legal', action: 'Legal review approved' },
+      { id: crypto.randomUUID(), timestamp: '2026-06-02T10:00:00Z', actor: 'K. Economou', role: 'Finance', action: 'Finance review approved' },
+      { id: crypto.randomUUID(), timestamp: '2026-06-03T09:00:00Z', actor: 'System', role: 'System', action: 'Status changed', detail: 'All Reviews Completed' },
+    ],
+  },
+
+  // 18 — Submitted to Chairman | Finance/Treasury | URGENT (5 days to sprint deadline)
+  {
+    id: 'seed-018',
+    title: 'Group Directors & Officers Insurance Programme Renewal 2026–2027',
+    businessNeed:
+      'PPC\'s Group Directors & Officers (D&O) and Corporate Legal Liability insurance programme expires on 30 June 2026. The renewal involves an updated coverage structure reflecting the expanded ESG disclosure obligations under CSRD and increased limit to EUR 150M aggregate following the Greek energy market investigations of 2025.',
+    businessUnit: 'Finance/Treasury',
+    owner: 'C. Papadimitriou',
+    status: 'Submitted to Chairman',
+    createdAt: '2026-05-10T10:00:00Z',
+    boardMeetingDate: SPRINT_BOARD_MEETING_DATE,
+    bodDeadline: SPRINT_BOD_DEADLINE,
+    regulatoryRefs: ['EU CSRD (Directive 2022/2464)', 'L.4706/2020 Art. 87 (D&O Liability)', 'Hellenic Corporate Governance Code 2021'],
+    contentSections: [
+      { id: 's1', title: 'Coverage Summary', body: 'EUR 150M aggregate limit (up from EUR 100M). Side A DIC/DIL cover for personal asset protection. CSRD investigation coverage rider added.' },
+      { id: 's2', title: 'Premium', body: 'Annual premium EUR 1.85M (vs EUR 1.42M prior year). Market hardening driven by ESG investigation claims across European utilities sector.' },
+    ],
+    draftResolution:
+      'The Board of Directors of PPC S.A. approves the renewal of the Group D&O and Corporate Legal Liability insurance programme for 2026–2027 at an annual premium of EUR 1.85M with aggregate coverage of EUR 150M, and authorises the CFO to execute all related insurance documentation.',
+    reviews: {
+      legal: approved('M. Stavrou', '2026-05-28T14:00:00Z'),
+      finance: approved('K. Economou', '2026-06-01T11:00:00Z'),
+      compliance: approved('A. Nikolaou', '2026-06-02T09:30:00Z'),
+    },
+    readinessScore: 62,
+    auditLog: [
+      { id: crypto.randomUUID(), timestamp: '2026-05-10T10:00:00Z', actor: 'C. Papadimitriou', role: 'Finance/Treasury', action: 'Created recommendation' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-15T09:00:00Z', actor: 'C. Papadimitriou', role: 'Finance/Treasury', action: 'Sent for review', detail: 'Sent to Legal, Finance, Compliance' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-28T14:00:00Z', actor: 'M. Stavrou', role: 'Legal', action: 'Legal review approved' },
+      { id: crypto.randomUUID(), timestamp: '2026-06-01T11:00:00Z', actor: 'K. Economou', role: 'Finance', action: 'Finance review approved' },
+      { id: crypto.randomUUID(), timestamp: '2026-06-02T09:30:00Z', actor: 'System', role: 'System', action: 'Status changed', detail: 'All Reviews Completed' },
+      { id: crypto.randomUUID(), timestamp: '2026-06-04T10:00:00Z', actor: 'C. Papadimitriou', role: 'Finance/Treasury', action: 'Submitted to Chairman' },
+    ],
+  },
+
+  // 20 — All Reviews Completed | Legal/Compliance | OVERDUE (missed June 3 meeting — Chairman did not act in time)
+  {
+    id: 'seed-020',
+    title: 'Board Committee Terms of Reference — Annual Review 2026',
+    businessNeed:
+      'The Terms of Reference for PPC\'s five Board Committees (Audit, Remuneration, Nominations, ESG, Risk) are subject to mandatory annual review under the Hellenic Corporate Governance Code 2021 and L.4706/2020. The 2026 review incorporates updated ESRS E1/S1 oversight mandates for the ESG Committee and enhanced risk appetite statement procedures for the Risk Committee.',
+    businessUnit: 'Legal/Compliance',
+    owner: 'S. Vassiliadis',
+    status: 'All Reviews Completed',
+    createdAt: '2026-03-10T09:00:00Z',
+    boardMeetingDate: OVERDUE_BOARD_MEETING_DATE,
+    bodDeadline: OVERDUE_BOD_DEADLINE,
+    regulatoryRefs: ['Hellenic Corporate Governance Code 2021', 'L.4706/2020 Art. 9-11', 'ESRS E1 / S1 (Board Oversight)'],
+    contentSections: [
+      { id: 's1', title: 'Scope of Changes', body: 'ESG Committee: added ESRS E1/S1 reporting oversight role and quarterly management update obligation. Risk Committee: updated risk appetite statement review cycle from annual to semi-annual.' },
+      { id: 's2', title: 'Implementation', body: 'Updated ToR documents approved by each Committee. Board formal approval required. Effective date: post-Board adoption.' },
+    ],
+    draftResolution:
+      'The Board of Directors of PPC S.A. approves the updated Terms of Reference for all five Board Committees (Audit, Remuneration, Nominations, ESG, Risk) as set out in the attached documents, effective from the date of this resolution.',
+    reviews: {
+      legal: approved('M. Stavrou', '2026-04-20T11:00:00Z'),
+      finance: approved('K. Economou', '2026-04-22T14:00:00Z'),
+      compliance: approved('A. Nikolaou', '2026-04-25T09:00:00Z'),
+    },
+    readinessScore: 68,
+    auditLog: [
+      { id: crypto.randomUUID(), timestamp: '2026-03-10T09:00:00Z', actor: 'S. Vassiliadis', role: 'Legal/Compliance', action: 'Created recommendation' },
+      { id: crypto.randomUUID(), timestamp: '2026-04-05T10:00:00Z', actor: 'S. Vassiliadis', role: 'Legal/Compliance', action: 'Sent for review' },
+      { id: crypto.randomUUID(), timestamp: '2026-04-20T11:00:00Z', actor: 'M. Stavrou', role: 'Legal', action: 'Legal review approved' },
+      { id: crypto.randomUUID(), timestamp: '2026-04-22T14:00:00Z', actor: 'K. Economou', role: 'Finance', action: 'Finance review approved' },
+      { id: crypto.randomUUID(), timestamp: '2026-04-25T09:00:00Z', actor: 'System', role: 'System', action: 'Status changed', detail: 'All Reviews Completed' },
+    ],
+  },
+
+  // 19 — Ready for BoD | Legal/Compliance | July meeting
+  {
+    id: 'seed-019',
+    title: 'Anti-Bribery & Corruption Policy v4 — Triennial Review',
+    businessNeed:
+      'Triennial review of PPC\'s Anti-Bribery & Corruption (ABC) Policy is required under the Group Compliance Framework. The v4 update incorporates Greek Law 4557/2018 (as amended), OECD Anti-Bribery Convention updates, and new third-party due diligence requirements triggered by the Group\'s expansion into Romanian and Bulgarian markets.',
+    businessUnit: 'Legal/Compliance',
+    owner: 'S. Vassiliadis',
+    status: 'Ready for BoD',
+    createdAt: '2026-03-01T09:00:00Z',
+    boardMeetingDate: BOARD_MEETING_DATE,
+    bodDeadline: BOD_DEADLINE,
+    regulatoryRefs: ['L.4557/2018 (AML/ABC)', 'OECD Anti-Bribery Convention', 'ISO 37001:2016 (ABMS)'],
+    contentSections: [
+      { id: 's1', title: 'Policy Updates', body: 'Expanded third-party due diligence scope to include all Romanian and Bulgarian counterparties above EUR 50K threshold. Enhanced whistleblower channel anonymity.' },
+      { id: 's2', title: 'Training Programme', body: 'Mandatory ABC e-learning module for all 6,800 employees and third-party contractors by Q3 2026. Board members: in-person session July 2026.' },
+      { id: 's3', title: 'Implementation', body: 'New ABC screening platform (Refinitiv World-Check) contracted. Integration with procurement system by September 2026.' },
+    ],
+    draftResolution:
+      'The Board of Directors of PPC S.A. approves Anti-Bribery & Corruption Policy v4, effective 1 August 2026, and directs management to implement the updated third-party due diligence requirements and training programme as set out herein.',
+    reviews: {
+      legal: approved('M. Stavrou', '2026-04-15T11:00:00Z'),
+      finance: approved('K. Economou', '2026-04-17T14:00:00Z'),
+      compliance: approved('A. Nikolaou', '2026-04-20T09:00:00Z'),
+    },
+    readinessScore: 90,
+    bodPackItems: [
+      'Board Memorandum',
+      'Draft Board Resolution',
+      'ABC Policy v4 Document',
+      'Legal Review Summary',
+      'Compliance Clearance Certificate',
+      'Training Programme Overview',
+      'ISO 37001 Gap Analysis',
+    ],
+    auditLog: [
+      { id: crypto.randomUUID(), timestamp: '2026-03-01T09:00:00Z', actor: 'S. Vassiliadis', role: 'Legal/Compliance', action: 'Created recommendation' },
+      { id: crypto.randomUUID(), timestamp: '2026-04-01T10:00:00Z', actor: 'S. Vassiliadis', role: 'Legal/Compliance', action: 'Sent for review' },
+      { id: crypto.randomUUID(), timestamp: '2026-04-20T09:00:00Z', actor: 'System', role: 'System', action: 'Status changed', detail: 'All Reviews Completed' },
+      { id: crypto.randomUUID(), timestamp: '2026-04-25T10:00:00Z', actor: 'S. Vassiliadis', role: 'Legal/Compliance', action: 'Submitted to Chairman' },
+      { id: crypto.randomUUID(), timestamp: '2026-06-03T11:00:00Z', actor: 'P. Georgiou', role: 'Chairman', action: 'Readiness check completed', detail: 'Score: 90/100. BoD pack assembled.' },
+      { id: crypto.randomUUID(), timestamp: '2026-06-03T11:30:00Z', actor: 'System', role: 'System', action: 'Status changed', detail: 'Ready for BoD' },
     ],
   },
 ]
