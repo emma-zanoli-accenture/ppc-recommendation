@@ -3,7 +3,7 @@ export type RecommendationStatus =
   | 'Under Review'
   | 'Returned for Update'
   | 'All Reviews Completed'
-  | 'Submitted to Secretariat'
+  | 'Submitted to Chairman'
   | 'Ready for BoD'
   | 'Submitted to BoD'
 

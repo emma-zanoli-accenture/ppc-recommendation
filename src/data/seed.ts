@@ -131,9 +131,9 @@ export const seedRecommendations: Recommendation[] = [
       { id: crypto.randomUUID(), timestamp: '2026-02-01T10:00:00Z', actor: 'C. Papadimitriou', role: 'Finance/Treasury', action: 'Created recommendation' },
       { id: crypto.randomUUID(), timestamp: '2026-03-01T09:00:00Z', actor: 'C. Papadimitriou', role: 'Finance/Treasury', action: 'Sent for review' },
       { id: crypto.randomUUID(), timestamp: '2026-03-20T09:00:00Z', actor: 'System', role: 'System', action: 'Status changed', detail: 'All Reviews Completed' },
-      { id: crypto.randomUUID(), timestamp: '2026-03-25T10:00:00Z', actor: 'C. Papadimitriou', role: 'Finance/Treasury', action: 'Submitted to Secretariat' },
-      { id: crypto.randomUUID(), timestamp: '2026-04-10T11:00:00Z', actor: 'P. Georgiou', role: 'Corporate Secretariat', action: 'Readiness check completed', detail: 'Score: 98/100' },
-      { id: crypto.randomUUID(), timestamp: '2026-04-15T09:00:00Z', actor: 'P. Georgiou', role: 'Corporate Secretariat', action: 'Submitted to BoD' },
+      { id: crypto.randomUUID(), timestamp: '2026-03-25T10:00:00Z', actor: 'C. Papadimitriou', role: 'Finance/Treasury', action: 'Submitted to Chairman' },
+      { id: crypto.randomUUID(), timestamp: '2026-04-10T11:00:00Z', actor: 'P. Georgiou', role: 'Chairman', action: 'Readiness check completed', detail: 'Score: 98/100' },
+      { id: crypto.randomUUID(), timestamp: '2026-04-15T09:00:00Z', actor: 'P. Georgiou', role: 'Chairman', action: 'Submitted to BoD' },
     ],
   },
 
@@ -175,8 +175,8 @@ export const seedRecommendations: Recommendation[] = [
       { id: crypto.randomUUID(), timestamp: '2026-03-05T08:00:00Z', actor: 'E. Theodoridis', role: 'Regulatory Affairs', action: 'Created recommendation' },
       { id: crypto.randomUUID(), timestamp: '2026-04-01T09:00:00Z', actor: 'E. Theodoridis', role: 'Regulatory Affairs', action: 'Sent for review' },
       { id: crypto.randomUUID(), timestamp: '2026-05-05T09:00:00Z', actor: 'System', role: 'System', action: 'Status changed', detail: 'All Reviews Completed' },
-      { id: crypto.randomUUID(), timestamp: '2026-05-08T10:00:00Z', actor: 'E. Theodoridis', role: 'Regulatory Affairs', action: 'Submitted to Secretariat' },
-      { id: crypto.randomUUID(), timestamp: '2026-05-20T11:30:00Z', actor: 'P. Georgiou', role: 'Corporate Secretariat', action: 'Readiness check completed', detail: 'Score: 92/100. BoD pack assembled.' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-08T10:00:00Z', actor: 'E. Theodoridis', role: 'Regulatory Affairs', action: 'Submitted to Chairman' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-20T11:30:00Z', actor: 'P. Georgiou', role: 'Chairman', action: 'Readiness check completed', detail: 'Score: 92/100. BoD pack assembled.' },
       { id: crypto.randomUUID(), timestamp: '2026-05-20T11:35:00Z', actor: 'System', role: 'System', action: 'Status changed', detail: 'Ready for BoD' },
     ],
   },
@@ -209,7 +209,7 @@ export const seedRecommendations: Recommendation[] = [
     ],
   },
 
-  // 6 — Submitted to Secretariat
+  // 6 — Submitted to Chairman
   {
     id: 'seed-006',
     title: 'Net-Zero 2040 Commitment: Board Endorsement & Climate Transition Plan',
@@ -217,7 +217,7 @@ export const seedRecommendations: Recommendation[] = [
       'PPC\'s updated Science-Based Target initiative (SBTi) aligned Net-Zero 2040 commitment requires formal Board endorsement to satisfy investor engagement requirements and CDP reporting obligations due by September 2026.',
     businessUnit: 'ESG',
     owner: 'I. Papadaki',
-    status: 'Submitted to Secretariat',
+    status: 'Submitted to Chairman',
     createdAt: '2026-03-20T10:00:00Z',
     boardMeetingDate: BOARD_MEETING_DATE,
     bodDeadline: BOD_DEADLINE,
@@ -239,7 +239,7 @@ export const seedRecommendations: Recommendation[] = [
       { id: crypto.randomUUID(), timestamp: '2026-03-20T10:00:00Z', actor: 'I. Papadaki', role: 'ESG', action: 'Created recommendation' },
       { id: crypto.randomUUID(), timestamp: '2026-04-20T09:00:00Z', actor: 'I. Papadaki', role: 'ESG', action: 'Sent for review' },
       { id: crypto.randomUUID(), timestamp: '2026-05-15T09:30:00Z', actor: 'System', role: 'System', action: 'Status changed', detail: 'All Reviews Completed' },
-      { id: crypto.randomUUID(), timestamp: '2026-05-22T10:00:00Z', actor: 'I. Papadaki', role: 'ESG', action: 'Submitted to Secretariat' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-22T10:00:00Z', actor: 'I. Papadaki', role: 'ESG', action: 'Submitted to Chairman' },
     ],
   },
 
@@ -310,7 +310,7 @@ export const seedRecommendations: Recommendation[] = [
     ],
   },
 
-  // 9 — Submitted to Secretariat
+  // 9 — Submitted to Chairman
   {
     id: 'seed-009',
     title: 'Pumped Hydro Storage Expansion — Sfikia Reservoir (600 MW)',
@@ -318,7 +318,7 @@ export const seedRecommendations: Recommendation[] = [
       'PPC seeks Board approval for the development of a 600 MW pumped hydro storage facility at Sfikia Reservoir in Central Macedonia. The project supports grid balancing services and will benefit from EU Innovation Fund co-financing.',
     businessUnit: 'Operations',
     owner: 'V. Mantzoufas',
-    status: 'Submitted to Secretariat',
+    status: 'Submitted to Chairman',
     createdAt: '2026-02-20T09:00:00Z',
     boardMeetingDate: BOARD_MEETING_DATE,
     bodDeadline: BOD_DEADLINE,
@@ -340,7 +340,7 @@ export const seedRecommendations: Recommendation[] = [
       { id: crypto.randomUUID(), timestamp: '2026-02-20T09:00:00Z', actor: 'V. Mantzoufas', role: 'Operations', action: 'Created recommendation' },
       { id: crypto.randomUUID(), timestamp: '2026-03-20T10:00:00Z', actor: 'V. Mantzoufas', role: 'Operations', action: 'Sent for review' },
       { id: crypto.randomUUID(), timestamp: '2026-04-22T09:30:00Z', actor: 'System', role: 'System', action: 'Status changed', detail: 'All Reviews Completed' },
-      { id: crypto.randomUUID(), timestamp: '2026-05-05T10:00:00Z', actor: 'V. Mantzoufas', role: 'Operations', action: 'Submitted to Secretariat' },
+      { id: crypto.randomUUID(), timestamp: '2026-05-05T10:00:00Z', actor: 'V. Mantzoufas', role: 'Operations', action: 'Submitted to Chairman' },
     ],
   },
 

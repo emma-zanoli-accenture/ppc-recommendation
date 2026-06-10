@@ -4,9 +4,9 @@ import { useRecoStore } from '@/store'
 import { APP_NAME, PPC_CLIENT } from '@/lib/constants'
 
 const PERSONAS: { id: Persona; label: string; sublabel: string; icon: React.ElementType }[] = [
-  { id: 'bu', label: 'Business Unit', sublabel: 'Procurement', icon: Users },
-  { id: 'review', label: 'Legal / Finance', sublabel: '/ Compliance', icon: Scale },
-  { id: 'secretariat', label: 'Corporate', sublabel: 'Secretariat', icon: Crown },
+  { id: 'bu', label: 'Recommendation', sublabel: 'Owner', icon: Users },
+  { id: 'review', label: 'Reviewers', sublabel: '', icon: Scale },
+  { id: 'secretariat', label: 'Chairman', sublabel: '', icon: Crown },
 ]
 
 function Badge({ count }: { count: number }) {
@@ -29,7 +29,7 @@ export default function TopBar() {
   ).length
   const reviewCount = recommendations.filter((r) => r.status === 'Under Review').length
   const secretariatCount = recommendations.filter(
-    (r) => r.status === 'Submitted to Secretariat'
+    (r) => r.status === 'Submitted to Chairman'
   ).length
 
   const badgeCounts: Record<Persona, number> = {

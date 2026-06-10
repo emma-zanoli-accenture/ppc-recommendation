@@ -222,7 +222,7 @@ export const useRecoStore = create<RecoStore>((set, get) => {
         id,
         (r) => ({
           ...r,
-          status: 'Submitted to Secretariat',
+          status: 'Submitted to Chairman',
           directToChairman: { reason, sentAt: now() },
         }),
         {
@@ -341,12 +341,12 @@ export const useRecoStore = create<RecoStore>((set, get) => {
     submitToSecretariat: (id) => {
       update(
         id,
-        (r) => ({ ...r, status: 'Submitted to Secretariat' }),
+        (r) => ({ ...r, status: 'Submitted to Chairman' }),
         {
           timestamp: now(),
           actor: get().getById(id)?.owner ?? 'Unknown',
           role: get().getById(id)?.businessUnit ?? '',
-          action: 'Submitted to Corporate Secretariat',
+          action: 'Submitted to Chairman',
         }
       )
     },
@@ -381,8 +381,8 @@ export const useRecoStore = create<RecoStore>((set, get) => {
         (r) => ({ ...r, status: 'Submitted to BoD' }),
         {
           timestamp: now(),
-          actor: 'Corporate Secretariat',
-          role: 'Corporate Secretariat',
+          actor: 'Chairman',
+          role: 'Chairman',
           action: 'Submitted to Board of Directors',
         }
       )

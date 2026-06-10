@@ -33,7 +33,7 @@ export const statusColors: Record<RecommendationStatus, StatusStyle> = {
     dot: '#059669',
   },
   // Intentionally reuses agent violet — this is the handoff point into the agentic workflow
-  'Submitted to Secretariat': {
+  'Submitted to Chairman': {
     text: 'text-violet-700',
     bg: 'bg-violet-50',
     border: 'border-violet-200',

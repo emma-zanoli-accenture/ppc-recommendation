@@ -9,7 +9,7 @@ const SEC_LEGAL_COUNSEL = 'V. Oikonomou'
 
 const BEYOND_REVIEW = new Set<RecommendationStatus>([
   'All Reviews Completed',
-  'Submitted to Secretariat',
+  'Submitted to Chairman',
   'Ready for BoD',
   'Submitted to BoD',
 ])
@@ -51,7 +51,7 @@ export const SIG_TIERS: SigTier[] = [
         getTs: (r) =>
           auditTs(r, 'Legal feedback integrated — version accepted') ??
           auditTs(r, 'Sent directly to Chairman') ??
-          auditTs(r, 'Submitted to Corporate Secretariat'),
+          auditTs(r, 'Submitted to Chairman'),
       },
     ],
   },

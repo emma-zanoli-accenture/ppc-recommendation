@@ -12,7 +12,7 @@ const ROLE_COLORS: Record<string, string> = {
   Finance: 'bg-emerald-400',
   Compliance: 'bg-violet-400',
   System: 'bg-slate-300',
-  'Corporate Secretariat': 'bg-brand',
+  Chairman: 'bg-brand',
 }
 
 function dotColor(role: string): string {

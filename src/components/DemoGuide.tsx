@@ -9,9 +9,9 @@ const PERSONA_ICONS: Record<Persona, React.ElementType> = {
 }
 
 const PERSONA_LABELS: Record<Persona, string> = {
-  bu: 'Business Unit',
-  review: 'Legal / Finance / Compliance',
-  secretariat: 'Corporate Secretariat',
+  bu: 'Recommendation Owner',
+  review: 'Reviewers',
+  secretariat: 'Chairman',
 }
 
 export default function DemoGuide() {

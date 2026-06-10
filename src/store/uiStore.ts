@@ -5,7 +5,7 @@ export type Persona = 'bu' | 'review' | 'secretariat'
 export const PERSONA_LABELS: Record<Persona, string> = {
   bu: 'Business Unit',
   review: 'Legal / Finance / Compliance',
-  secretariat: 'Corporate Secretariat',
+  secretariat: 'Chairman',
 }
 
 export interface DemoStep {
@@ -43,8 +43,8 @@ export const DEMO_STEPS: DemoStep[] = [
   {
     persona: 'bu',
     title: 'Step 5 — Review feedback & accept',
-    hint: 'Click the recommendation showing "Returned for Update". Click "Review Feedback". Apply each of the 3 Legal comments with the "Apply" button — each updates the corresponding section. Once all resolved, click "Verify & accept version". Once all reviews complete, click "Submit to Secretariat".',
-    switchHint: '→ Switch to Corporate Secretariat',
+    hint: 'Click the recommendation showing "Returned for Update". Click "Review Feedback". Apply each of the 3 Legal comments with the "Apply" button — each updates the corresponding section. Once all resolved, click "Verify & accept version". Once all reviews complete, click "Submit to Chairman".',
+    switchHint: '→ Switch to Chairman',
   },
   {
     persona: 'secretariat',

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
@@ -25,7 +25,8 @@ import {
 } from '@/agents/scripts'
 import { daysUntil } from '@/lib/utils'
 import type { AgentScript } from '@/agents/engine'
-import type { ReviewFunction, Recommendation } from '@/lib/types'
+import type { ReviewFunction, Recommendation, RecommendationStatus } from '@/lib/types'
+import { statusColors } from '@/lib/statusColors'
 import type { LegalReviewOutput } from '@/agents/scripts/legalReview'
 import type { FinanceReviewOutput } from '@/agents/scripts/financeReview'
 import type { ComplianceReviewOutput } from '@/agents/scripts/complianceReview'
@@ -233,6 +234,10 @@ function RFDashboard({
   onView: (id: string) => void
 }) {
   const [buFilter, setBuFilter] = useState('Procurement')
+  const [statusFilter, setStatusFilter] = useState<RecommendationStatus | 'All'>('All')
+
+  // Reset status filter when switching between Legal / Finance / Compliance tabs
+  useEffect(() => { setStatusFilter('All') }, [activeFn])
 
   const fnCfg = FN_CONFIG[activeFn]
   const Icon = fnCfg.icon
@@ -242,14 +247,26 @@ function RFDashboard({
     (r) => r.reviews[activeFn].status !== 'Pending'
   )
 
-  // Filter by BU
-  const displayed =
+  // Apply BU filter
+  const byBU =
     buFilter === 'All BUs'
       ? myItems
       : myItems.filter((r) => r.businessUnit === buFilter)
 
-  // New items in queue (In Review = just arrived)
-  const newItems = displayed.filter((r) => r.reviews[activeFn].status === 'In Review')
+  // Derive status counts from reco.status (matches what's shown on cards)
+  const statusCounts = byBU.reduce<Record<string, number>>((acc, r) => {
+    acc[r.status] = (acc[r.status] ?? 0) + 1
+    return acc
+  }, {})
+
+  // Apply reco-level status filter
+  const displayed =
+    statusFilter === 'All'
+      ? byBU
+      : byBU.filter((r) => r.status === statusFilter)
+
+  // New items still awaiting this function's review
+  const newItems = byBU.filter((r) => r.reviews[activeFn].status === 'In Review')
 
   // Available BU values from all recommendations (for filter pills)
   const buValues = Array.from(new Set(recommendations.map((r) => r.businessUnit))).sort()
@@ -258,7 +275,7 @@ function RFDashboard({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-800">
-          Legal / Finance / Compliance
+          Reviewers
         </h1>
         <p className="text-slate-500 text-sm mt-1">Specialist review functions</p>
       </div>
@@ -287,7 +304,7 @@ function RFDashboard({
 
       {/* BU filter */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-slate-400 font-medium">Filter by BU:</span>
+        <span className="text-xs text-slate-400 font-medium">BU:</span>
         {['All BUs', ...buValues].map((bu) => (
           <button
             key={bu}
@@ -303,19 +320,54 @@ function RFDashboard({
         ))}
       </div>
 
+      {/* Status filter — derived from actual reco statuses in queue */}
+      {Object.keys(statusCounts).length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-400 font-medium">Status:</span>
+          <button
+            onClick={() => setStatusFilter('All')}
+            className={`text-xs px-3 py-1 rounded-full border font-medium transition-all ${
+              statusFilter === 'All'
+                ? 'bg-brand text-white border-brand'
+                : 'border-border-subtle text-slate-500 hover:border-border-strong hover:text-slate-700'
+            }`}
+          >
+            All ({byBU.length})
+          </button>
+          {Object.entries(statusCounts).map(([status, count]) => {
+            const c = statusColors[status as RecommendationStatus]
+            const active = statusFilter === status
+            return (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(active ? 'All' : status as RecommendationStatus)}
+                className={`text-xs px-3 py-1 rounded-full border font-medium transition-all ${
+                  active
+                    ? `${c.text} ${c.bg} ${c.border} ring-2 ring-current ring-offset-1`
+                    : `${c.text} bg-surface ${c.border} opacity-60 hover:opacity-100`
+                }`}
+              >
+                {count} · {status}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {/* Recommendations grid */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
             <Icon className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-            {fnCfg.label} review queue — {buFilter}
+            {fnCfg.label} review queue
+            {statusFilter !== 'All' && <span className="ml-1.5 font-normal normal-case text-slate-400">· {statusFilter}</span>}
             <span className="ml-2 text-slate-400 font-normal normal-case">({displayed.length})</span>
           </h2>
         </div>
 
         {displayed.length === 0 ? (
           <p className="text-slate-400 text-sm italic">
-            No items requiring {fnCfg.label} review{buFilter !== 'All BUs' ? ` for ${buFilter}` : ''}.
+            No items{statusFilter !== 'All' ? ` with status "${statusFilter}"` : ''}{buFilter !== 'All BUs' ? ` for ${buFilter}` : ''}.
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

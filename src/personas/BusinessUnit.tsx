@@ -159,17 +159,20 @@ function BUDashboard({
   onView: (id: string, status: RecommendationStatus) => void
 }) {
   const buRecos = recommendations.filter((r) => r.businessUnit === 'Procurement')
+  const [statusFilter, setStatusFilter] = useState<RecommendationStatus | 'All'>('All')
 
   const statusCounts = buRecos.reduce<Record<string, number>>((acc, r) => {
     acc[r.status] = (acc[r.status] ?? 0) + 1
     return acc
   }, {})
 
+  const filtered = statusFilter === 'All' ? buRecos : buRecos.filter((r) => r.status === statusFilter)
+
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">Business Unit — Procurement</h1>
+          <h1 className="text-2xl font-semibold text-slate-800">Recommendation Owner</h1>
           <p className="text-slate-500 text-sm mt-1">My recommendations</p>
         </div>
         <button
@@ -181,16 +184,33 @@ function BUDashboard({
       </div>
 
       {Object.keys(statusCounts).length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-400 font-medium">Filter:</span>
+          <button
+            onClick={() => setStatusFilter('All')}
+            className={`text-xs px-3 py-1 rounded-full border font-medium transition-all ${
+              statusFilter === 'All'
+                ? 'bg-brand text-white border-brand'
+                : 'border-border-subtle text-slate-500 hover:border-border-strong hover:text-slate-700'
+            }`}
+          >
+            All ({buRecos.length})
+          </button>
           {Object.entries(statusCounts).map(([status, count]) => {
             const c = statusColors[status as RecommendationStatus]
+            const active = statusFilter === status
             return (
-              <span
+              <button
                 key={status}
-                className={`text-xs px-3 py-1 rounded-full border font-medium ${c.text} ${c.bg} ${c.border}`}
+                onClick={() => setStatusFilter(active ? 'All' : status as RecommendationStatus)}
+                className={`text-xs px-3 py-1 rounded-full border font-medium transition-all ${
+                  active
+                    ? `${c.text} ${c.bg} ${c.border} ring-2 ring-current ring-offset-1`
+                    : `${c.text} bg-surface ${c.border} opacity-60 hover:opacity-100`
+                }`}
               >
                 {count} · {status}
-              </span>
+              </button>
             )
           })}
         </div>
@@ -198,15 +218,21 @@ function BUDashboard({
 
       <div>
         <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-3">
-          Procurement Recommendations ({buRecos.length})
+          My Recommendations
+          {statusFilter !== 'All' && <span className="ml-1.5 font-normal normal-case text-slate-400">· {statusFilter}</span>}
+          <span className="ml-1.5 font-normal text-slate-400">
+            ({filtered.length}{statusFilter !== 'All' ? ` of ${buRecos.length}` : ''})
+          </span>
         </h2>
-        {buRecos.length === 0 ? (
+        {filtered.length === 0 ? (
           <p className="text-slate-400 text-sm italic">
-            No recommendations yet. Create one to get started.
+            {buRecos.length === 0
+              ? 'No recommendations yet. Create one to get started.'
+              : `No recommendations with status "${statusFilter}".`}
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[...buRecos].reverse().map((r, i) => (
+            {[...filtered].reverse().map((r, i) => (
               <RecoCard
                 key={r.id}
                 recommendation={r}
@@ -1008,7 +1034,7 @@ function BUFeedbackView({
 
   const isReturned = reco.status === 'Returned for Update'
   const allDone = reco.status === 'All Reviews Completed'
-  const isSubmitted = ['Submitted to Secretariat', 'Ready for BoD', 'Submitted to BoD'].includes(
+  const isSubmitted = ['Submitted to Chairman', 'Ready for BoD', 'Submitted to BoD'].includes(
     reco.status
   )
 
@@ -1125,7 +1151,7 @@ function BUFeedbackView({
                   }}
                   className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dim transition-colors inline-flex items-center gap-1.5"
                 >
-                  Submit to Secretariat
+                  Submit to Chairman
                   <ChevronRight className="w-4 h-4" />
                 </button>
               )}
@@ -1137,7 +1163,7 @@ function BUFeedbackView({
               <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-emerald-700">
-                  Submitted to Corporate Secretariat
+                  Submitted to Chairman
                 </p>
                 <p className="text-xs text-emerald-600 mt-0.5">
                   The Readiness Agent will assess completeness and prepare the BoD pack.

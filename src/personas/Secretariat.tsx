@@ -14,6 +14,7 @@ import {
   Clock,
   Package,
   X,
+  BarChart2,
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { useRecoStore } from '@/store'
@@ -26,6 +27,7 @@ import ReadinessMeter from '@/components/ReadinessMeter'
 import Timeline from '@/components/Timeline'
 import { readinessAgentScript } from '@/agents/scripts'
 import { daysUntil } from '@/lib/utils'
+import { statusColors } from '@/lib/statusColors'
 import type { Recommendation, RecommendationStatus, ReviewFunction } from '@/lib/types'
 import type { ReadinessOutput } from '@/agents/scripts/readiness'
 
@@ -41,7 +43,7 @@ const PAGE = {
 }
 
 const PIPELINE_STATUSES: RecommendationStatus[] = [
-  'Submitted to Secretariat',
+  'Submitted to Chairman',
   'Ready for BoD',
   'Submitted to BoD',
 ]
@@ -532,6 +534,161 @@ function CompletenessChecklist({ reco }: { reco: Recommendation }) {
   )
 }
 
+// ─── Stats panel ─────────────────────────────────────────────────────────────
+
+const STATUS_ORDER: RecommendationStatus[] = [
+  'Draft', 'Under Review', 'Returned for Update', 'All Reviews Completed',
+  'Submitted to Chairman', 'Ready for BoD', 'Submitted to BoD',
+]
+
+function StatsPanel({ recommendations }: { recommendations: Recommendation[] }) {
+  const total = recommendations.length
+
+  // Pipeline funnel
+  const funnel = STATUS_ORDER
+    .map((s) => ({ status: s, count: recommendations.filter((r) => r.status === s).length }))
+    .filter((s) => s.count > 0)
+
+  // Deadline health — exclude already-submitted items
+  const active = recommendations.filter((r) => r.status !== 'Submitted to BoD')
+  const overdue = active.filter((r) => daysUntil(r.bodDeadline) <= 0).length
+  const urgent  = active.filter((r) => { const d = daysUntil(r.bodDeadline); return d > 0 && d <= 7 }).length
+  const onTrack = active.filter((r) => daysUntil(r.bodDeadline) > 7).length
+
+  // Review bottleneck — items currently Under Review
+  const inReview = recommendations.filter((r) => r.status === 'Under Review')
+  const bottleneck = [
+    { fn: 'Legal',      count: inReview.filter((r) => r.reviews.legal.status      === 'In Review').length },
+    { fn: 'Finance',    count: inReview.filter((r) => r.reviews.finance.status    === 'In Review').length },
+    { fn: 'Compliance', count: inReview.filter((r) => r.reviews.compliance.status === 'In Review').length },
+  ]
+  const maxBottleneck = Math.max(...bottleneck.map((b) => b.count), 1)
+
+  // Business unit breakdown
+  const byBU = Object.entries(
+    recommendations.reduce<Record<string, number>>((acc, r) => {
+      acc[r.businessUnit] = (acc[r.businessUnit] ?? 0) + 1
+      return acc
+    }, {})
+  ).sort((a, b) => b[1] - a[1])
+  const maxBU = byBU[0]?.[1] ?? 1
+
+  // Avg readiness (items that have been assessed)
+  const assessed = recommendations.filter((r) => r.readinessScore > 0)
+  const avgReadiness = assessed.length
+    ? Math.round(assessed.reduce((sum, r) => sum + r.readinessScore, 0) / assessed.length)
+    : null
+
+  // Next board meeting
+  const nextMeeting = recommendations[0]?.boardMeetingDate ?? '—'
+  const onAgenda = recommendations.filter((r) => r.status === 'Submitted to BoD').length
+
+  return (
+    <div className="bg-surface-raised border border-border-subtle rounded-2xl p-5 space-y-5">
+      {/* Top summary strip */}
+      <div className="flex items-center gap-6 pb-4 border-b border-border-subtle">
+        <div>
+          <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Total tracked</p>
+          <p className="text-2xl font-bold text-slate-800 mt-0.5">{total}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Next board meeting</p>
+          <p className="text-sm font-semibold text-slate-700 mt-0.5">{nextMeeting}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">On BoD agenda</p>
+          <p className="text-2xl font-bold text-green-600 mt-0.5">{onAgenda}</p>
+        </div>
+        {avgReadiness !== null && (
+          <div className="ml-auto">
+            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Avg readiness</p>
+            <p className={`text-2xl font-bold mt-0.5 ${avgReadiness >= 90 ? 'text-emerald-600' : avgReadiness >= 70 ? 'text-amber-600' : 'text-red-500'}`}>
+              {avgReadiness}<span className="text-sm font-normal text-slate-400">/100</span>
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Column 1: Pipeline funnel */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Pipeline Funnel</p>
+          {funnel.map(({ status, count }) => {
+            const c = statusColors[status]
+            return (
+              <div key={status} className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.dot }} />
+                <span className="text-xs text-slate-600 flex-1 truncate">{status}</span>
+                <div className="w-16 h-1.5 bg-surface rounded-full overflow-hidden flex-shrink-0">
+                  <div className="h-full rounded-full" style={{ width: `${(count / total) * 100}%`, backgroundColor: c.dot }} />
+                </div>
+                <span className={`text-xs font-bold w-4 text-right ${c.text}`}>{count}</span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Column 2: Deadline health + review bottleneck */}
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Deadline Health</p>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-red-50 border border-red-200 rounded-xl p-2.5 text-center">
+                <p className="text-xl font-bold text-red-600">{overdue}</p>
+                <p className="text-[10px] text-red-500 mt-0.5">Overdue</p>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-center">
+                <p className="text-xl font-bold text-amber-600">{urgent}</p>
+                <p className="text-[10px] text-amber-500 mt-0.5">Due ≤7d</p>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-center">
+                <p className="text-xl font-bold text-emerald-600">{onTrack}</p>
+                <p className="text-[10px] text-emerald-500 mt-0.5">On track</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Review Bottleneck</p>
+            {bottleneck.map(({ fn, count }) => (
+              <div key={fn} className="flex items-center gap-2">
+                <span className="text-xs text-slate-600 w-20">{fn}</span>
+                <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-blue-400"
+                    style={{ width: `${(count / maxBottleneck) * 100}%` }}
+                  />
+                </div>
+                <span className="text-xs font-bold text-slate-700 w-4 text-right">{count}</span>
+              </div>
+            ))}
+            {inReview.length === 0 && (
+              <p className="text-xs text-slate-400 italic">No items currently under review.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Column 3: Business unit breakdown */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">By Business Unit</p>
+          {byBU.map(([bu, count]) => (
+            <div key={bu} className="flex items-center gap-2">
+              <span className="text-xs text-slate-600 w-28 truncate">{bu}</span>
+              <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-brand/40"
+                  style={{ width: `${(count / maxBU) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs font-bold text-slate-700 w-4 text-right">{count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Chairman modal ───────────────────────────────────────────────────────────
 
 function ChairmanModal({
@@ -569,7 +726,7 @@ function ChairmanModal({
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-800">Chairman Review</p>
-              <p className="text-[11px] text-slate-400">Corporate Secretariat → Chairman</p>
+              <p className="text-[11px] text-slate-400">Chairman review</p>
             </div>
           </div>
           <button
@@ -684,6 +841,8 @@ function SecDashboard({
   onView: (id: string) => void
 }) {
   const [buFilter, setBuFilter] = useState('All BUs')
+  const [statusFilter, setStatusFilter] = useState<RecommendationStatus | 'All'>('All')
+  const [statsOpen, setStatsOpen] = useState(false)
 
   const pipelineItems = recommendations.filter((r) => PIPELINE_STATUSES.includes(r.status))
   const awaitingItems = recommendations.filter((r) => r.status === 'All Reviews Completed')
@@ -691,74 +850,91 @@ function SecDashboard({
   const scores = pipelineItems.map((r) => r.readinessScore).filter((s) => s > 0)
   const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0
 
-  const statusCounts: Record<string, number> = {
-    'All Reviews Completed': awaitingItems.length,
-    'Submitted to Secretariat': recommendations.filter((r) => r.status === 'Submitted to Secretariat').length,
-    'Ready for BoD': recommendations.filter((r) => r.status === 'Ready for BoD').length,
-    'Submitted to BoD': recommendations.filter((r) => r.status === 'Submitted to BoD').length,
-  }
-
   const buValues = Array.from(new Set(recommendations.map((r) => r.businessUnit))).sort()
 
-  const filter = (items: Recommendation[]) =>
+  const byBU = (items: Recommendation[]) =>
     buFilter === 'All BUs' ? items : items.filter((r) => r.businessUnit === buFilter)
 
   const sections: { label: string; status: RecommendationStatus; items: Recommendation[]; accent: string }[] = [
     {
-      label: 'Awaiting Secretariat submission',
+      label: 'Awaiting submission',
       status: 'All Reviews Completed',
-      items: filter(awaitingItems),
+      items: byBU(awaitingItems),
       accent: 'text-emerald-700',
     },
     {
       label: 'In pipeline',
-      status: 'Submitted to Secretariat',
-      items: filter(recommendations.filter((r) => r.status === 'Submitted to Secretariat')),
+      status: 'Submitted to Chairman',
+      items: byBU(recommendations.filter((r) => r.status === 'Submitted to Chairman')),
       accent: 'text-violet-700',
     },
     {
       label: 'Ready for BoD',
       status: 'Ready for BoD',
-      items: filter(recommendations.filter((r) => r.status === 'Ready for BoD')),
+      items: byBU(recommendations.filter((r) => r.status === 'Ready for BoD')),
       accent: 'text-sky-700',
     },
     {
       label: 'Submitted to BoD',
       status: 'Submitted to BoD',
-      items: filter(recommendations.filter((r) => r.status === 'Submitted to BoD')),
+      items: byBU(recommendations.filter((r) => r.status === 'Submitted to BoD')),
       accent: 'text-green-700',
     },
   ]
+
+  // Status counts after BU filter — drives the status pills
+  const statusCounts = sections.reduce<Record<string, number>>((acc, s) => {
+    if (s.items.length > 0) acc[s.status] = s.items.length
+    return acc
+  }, {})
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">Corporate Secretariat</h1>
+          <h1 className="text-2xl font-semibold text-slate-800">Chairman</h1>
           <p className="text-slate-500 text-sm mt-1">Control tower · BoD submission pipeline</p>
         </div>
-        {avgScore > 0 && (
-          <div className="flex flex-col items-center">
-            <ReadinessMeter score={avgScore} size="md" showLabel />
-            <p className="text-xs text-slate-400 mt-1">Avg readiness</p>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {avgScore > 0 && (
+            <div className="flex flex-col items-center">
+              <ReadinessMeter score={avgScore} size="md" showLabel />
+              <p className="text-xs text-slate-400 mt-1">Avg readiness</p>
+            </div>
+          )}
+          <button
+            onClick={() => setStatsOpen((v) => !v)}
+            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border transition-all ${
+              statsOpen
+                ? 'bg-brand text-white border-brand shadow-sm'
+                : 'text-slate-500 border-border-subtle hover:bg-surface-raised'
+            }`}
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+            Stats
+          </button>
+        </div>
       </div>
 
-      {/* Status tiles */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {Object.entries(statusCounts).map(([label, count]) => (
-          <div key={label} className="bg-surface border border-border-subtle rounded-xl p-4 text-center">
-            <p className="text-3xl font-bold text-slate-800">{count}</p>
-            <p className="text-xs text-slate-500 mt-1 leading-snug">{label}</p>
-          </div>
-        ))}
-      </div>
+      {/* Stats panel */}
+      <AnimatePresence>
+        {statsOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22 }}
+            className="overflow-hidden"
+          >
+            <StatsPanel recommendations={recommendations} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* BU filter */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-slate-400 font-medium">Filter:</span>
+        <span className="text-xs text-slate-400 font-medium">BU:</span>
         {['All BUs', ...buValues].map((bu) => (
           <button
             key={bu}
@@ -774,9 +950,44 @@ function SecDashboard({
         ))}
       </div>
 
+      {/* Status filter — same pill pattern as Owner and Reviewers */}
+      {Object.keys(statusCounts).length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-400 font-medium">Status:</span>
+          <button
+            onClick={() => setStatusFilter('All')}
+            className={`text-xs px-3 py-1 rounded-full border font-medium transition-all ${
+              statusFilter === 'All'
+                ? 'bg-brand text-white border-brand'
+                : 'border-border-subtle text-slate-500 hover:border-border-strong hover:text-slate-700'
+            }`}
+          >
+            All ({sections.reduce((n, s) => n + s.items.length, 0)})
+          </button>
+          {Object.entries(statusCounts).map(([status, count]) => {
+            const c = statusColors[status as RecommendationStatus]
+            const active = statusFilter === status
+            return (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(active ? 'All' : status as RecommendationStatus)}
+                className={`text-xs px-3 py-1 rounded-full border font-medium transition-all ${
+                  active
+                    ? `${c.text} ${c.bg} ${c.border} ring-2 ring-current ring-offset-1`
+                    : `${c.text} bg-surface ${c.border} opacity-60 hover:opacity-100`
+                }`}
+              >
+                {count} · {status}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {/* Pipeline sections */}
       <div className="space-y-8">
-        {sections.map(({ label, items, accent }) => {
+        {sections.map(({ label, status, items, accent }) => {
+          if (statusFilter !== 'All' && status !== statusFilter) return null
           if (items.length === 0) return null
           return (
             <div key={label} className="space-y-3">
@@ -792,9 +1003,10 @@ function SecDashboard({
           )
         })}
 
-        {sections.every((s) => s.items.length === 0) && (
+        {sections.every((s) => (statusFilter !== 'All' ? s.status !== statusFilter : false) || s.items.length === 0) && (
           <p className="text-slate-400 text-sm italic">
-            No items in pipeline{buFilter !== 'All BUs' ? ` for ${buFilter}` : ''}.
+            No items{statusFilter !== 'All' ? ` with status "${statusFilter}"` : ' in pipeline'}
+            {buFilter !== 'All BUs' ? ` for ${buFilter}` : ''}.
           </p>
         )}
       </div>
