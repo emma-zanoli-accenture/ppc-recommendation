@@ -9,34 +9,9 @@ const PERSONAS: { id: Persona; label: string; sublabel: string; icon: React.Elem
   { id: 'secretariat', label: 'Chairman', sublabel: '', icon: Crown },
 ]
 
-function Badge({ count }: { count: number }) {
-  if (count === 0) return null
-  return (
-    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-agent text-white text-[10px] font-bold flex items-center justify-center leading-none shadow-sm">
-      {count > 9 ? '9+' : count}
-    </span>
-  )
-}
-
 export default function TopBar() {
   const { persona, setPersona, demoGuideOpen, toggleDemoGuide, resetUI, kbOpen, setKbOpen } = useUIStore()
-  const recommendations = useRecoStore((s) => s.recommendations)
   const resetDemo = useRecoStore((s) => s.resetDemo)
-
-  // Items needing action per persona
-  const buCount = recommendations.filter(
-    (r) => r.status === 'Returned for Update' && r.businessUnit === 'Procurement'
-  ).length
-  const reviewCount = recommendations.filter((r) => r.status === 'Under Review').length
-  const secretariatCount = recommendations.filter(
-    (r) => r.status === 'Submitted to Chairman'
-  ).length
-
-  const badgeCounts: Record<Persona, number> = {
-    bu: buCount,
-    review: reviewCount,
-    secretariat: secretariatCount,
-  }
 
   const handleReset = () => {
     resetDemo()
@@ -57,12 +32,11 @@ export default function TopBar() {
         <div className="inline-flex items-center bg-surface-raised rounded-xl p-1 gap-1 border border-border-subtle">
           {PERSONAS.map(({ id, label, sublabel, icon: Icon }) => {
             const active = persona === id
-            const badgeCount = badgeCounts[id]
             return (
               <button
                 key={id}
                 onClick={() => setPersona(id)}
-                className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
                   active
                     ? 'bg-brand text-white shadow-sm'
                     : 'text-slate-500 hover:text-slate-800 hover:bg-surface'
@@ -75,7 +49,6 @@ export default function TopBar() {
                     {sublabel}
                   </span>
                 </span>
-                <Badge count={badgeCount} />
               </button>
             )
           })}
