@@ -506,12 +506,19 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
 // ─── Completeness checklist ───────────────────────────────────────────────────
 
 function CompletenessChecklist({ reco }: { reco: Recommendation }) {
+  const directApproved = !!reco.directToChairman?.chairmanApproved
+
   const checks = [
     { label: 'All content sections complete', pass: reco.contentSections.length >= 11 },
     { label: 'Draft resolution present', pass: reco.draftResolution.length > 0 },
-    { label: 'Legal review approved', pass: reco.reviews.legal.status.startsWith('Approved') },
-    { label: 'Finance review approved', pass: reco.reviews.finance.status.startsWith('Approved') },
-    { label: 'Compliance review approved', pass: reco.reviews.compliance.status.startsWith('Approved') },
+    ...(directApproved
+      ? [{ label: 'Direct submission authorised by Chairman', pass: true }]
+      : [
+          { label: 'Legal review approved', pass: reco.reviews.legal.status.startsWith('Approved') },
+          { label: 'Finance review approved', pass: reco.reviews.finance.status.startsWith('Approved') },
+          { label: 'Compliance review approved', pass: reco.reviews.compliance.status.startsWith('Approved') },
+        ]
+    ),
     { label: 'Regulatory references attached', pass: reco.regulatoryRefs.length > 0 },
     { label: 'BoD deadline not exceeded', pass: daysUntil(reco.bodDeadline) > 0 },
   ]
@@ -1045,6 +1052,7 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
   const updateReadinessScore = useRecoStore((s) => s.updateReadinessScore)
   const generateBoDPack = useRecoStore((s) => s.generateBoDPack)
   const submitToBoD = useRecoStore((s) => s.submitToBoD)
+  const approveDirectSubmission = useRecoStore((s) => s.approveDirectSubmission)
   const setOpenPrecedentId = useUIStore((s) => s.setOpenPrecedentId)
 
   const [agentOutput, setAgentOutput] = useState<ReadinessOutput | null>(null)
@@ -1144,6 +1152,53 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
             </p>
           </div>
         </div>
+      )}
+
+      {reco.directToChairman && (
+        reco.directToChairman.chairmanApproved ? (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-emerald-700">Direct submission authorised by Chairman</p>
+              <p className="text-xs text-emerald-600 mt-1 leading-relaxed">
+                <span className="font-medium">Stated reason:</span> {reco.directToChairman.reason}
+              </p>
+              <p className="text-xs text-emerald-500 mt-1">
+                Standard review functions bypassed. Completeness check updated accordingly.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-amber-800">Direct submission — Chairman review required</p>
+                <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                  This recommendation bypassed the standard Legal, Finance and Compliance review functions.
+                  The submitter provided the following reason:
+                </p>
+                <blockquote className="mt-2 pl-3 border-l-2 border-amber-300 text-sm text-amber-900 italic">
+                  "{reco.directToChairman.reason}"
+                </blockquote>
+                <p className="text-xs text-amber-600 mt-2">
+                  If you deem the reason appropriate, authorise the direct submission to update the completeness check.
+                </p>
+              </div>
+            </div>
+            {!isSubmitted && (
+              <div className="mt-3 flex justify-end">
+                <button
+                  onClick={() => approveDirectSubmission(recoId)}
+                  className="flex items-center gap-2 text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Authorise direct submission
+                </button>
+              </div>
+            )}
+          </div>
+        )
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1341,23 +1396,32 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
             <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
               Review Approvals
             </p>
-            {(['legal', 'finance', 'compliance'] as ReviewFunction[]).map((fn) => {
-              const review = reco.reviews[fn]
-              const ok = review.status === 'Approved'
-              return (
-                <div key={fn} className="flex items-center justify-between">
-                  <span className="text-xs text-slate-600">{FN_LABELS[fn]}</span>
-                  <div className={`flex items-center gap-1 text-xs font-medium ${ok ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {ok ? (
-                      <CheckCircle2 className="w-3 h-3" />
-                    ) : (
-                      <AlertTriangle className="w-3 h-3" />
-                    )}
-                    {review.status}
+            {reco.directToChairman?.chairmanApproved ? (
+              <div className="flex items-center gap-2 py-1">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                <span className="text-xs text-emerald-700 font-medium">
+                  Authorised by Chairman — standard reviews bypassed
+                </span>
+              </div>
+            ) : (
+              (['legal', 'finance', 'compliance'] as ReviewFunction[]).map((fn) => {
+                const review = reco.reviews[fn]
+                const ok = review.status === 'Approved'
+                return (
+                  <div key={fn} className="flex items-center justify-between">
+                    <span className="text-xs text-slate-600">{FN_LABELS[fn]}</span>
+                    <div className={`flex items-center gap-1 text-xs font-medium ${ok ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {ok ? (
+                        <CheckCircle2 className="w-3 h-3" />
+                      ) : (
+                        <AlertTriangle className="w-3 h-3" />
+                      )}
+                      {review.status}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </div>
 
           {/* Draft resolution preview */}

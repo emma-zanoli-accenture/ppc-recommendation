@@ -87,6 +87,8 @@ export interface RecoStore {
   // BU accepts all legal feedback changes → directly "All Reviews Completed"
   acceptFeedbackChanges: (id: string) => void
 
+  approveDirectSubmission: (id: string) => void
+
   submitToSecretariat: (id: string) => void
 
   updateReadinessScore: (id: string, score: number) => void
@@ -334,6 +336,25 @@ export const useRecoStore = create<RecoStore>((set, get) => {
           actor: get().getById(id)?.owner ?? 'Unknown',
           role: get().getById(id)?.businessUnit ?? '',
           action: 'Legal feedback integrated — version accepted',
+        }
+      )
+    },
+
+    approveDirectSubmission: (id) => {
+      update(
+        id,
+        (r) => ({
+          ...r,
+          directToChairman: r.directToChairman
+            ? { ...r.directToChairman, chairmanApproved: true, approvedAt: now() }
+            : r.directToChairman,
+        }),
+        {
+          timestamp: now(),
+          actor: 'Chairman',
+          role: 'Chairman',
+          action: 'Direct submission authorised',
+          detail: 'Reason for bypassing standard reviews accepted',
         }
       )
     },

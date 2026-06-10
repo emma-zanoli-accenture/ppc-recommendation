@@ -45,6 +45,8 @@ export interface AuditEntry {
 export interface DirectToChairman {
   reason: string
   sentAt: string
+  chairmanApproved?: boolean
+  approvedAt?: string
 }
 
 export interface Recommendation {
