@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { BookOpen, X } from 'lucide-react'
+import { BookOpen, Search, X } from 'lucide-react'
 import { PAST_RECOMMENDATIONS } from '@/data/knowledgeBase'
 import PrecedentDrawer from '@/components/PrecedentDrawer'
 import { useUIStore } from '@/store/uiStore'
@@ -16,13 +16,16 @@ const ALL_REFS = Array.from(new Set(PAST_RECOMMENDATIONS.flatMap((r) => r.regula
 
 export default function KnowledgeBase() {
   const setKbOpen = useUIStore((s) => s.setKbOpen)
+  const [query, setQuery] = useState('')
   const [selectedBU, setSelectedBU] = useState<string | null>(null)
   const [selectedRef, setSelectedRef] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  const q = query.trim().toLowerCase()
   const filtered = PAST_RECOMMENDATIONS.filter((r) => {
     if (selectedBU && r.businessUnit !== selectedBU) return false
     if (selectedRef && !r.regulatoryRefs.includes(selectedRef)) return false
+    if (q && !r.title.toLowerCase().includes(q) && !r.summary.toLowerCase().includes(q) && !r.businessUnit.toLowerCase().includes(q)) return false
     return true
   })
 
@@ -41,7 +44,7 @@ export default function KnowledgeBase() {
             <BookOpen className="w-5 h-5 text-brand" />
             <h1 className="text-2xl font-semibold text-slate-800">Knowledge Base</h1>
             <span className="text-sm font-medium text-slate-400 bg-surface-raised border border-border-subtle px-2.5 py-0.5 rounded-full">
-              {PAST_RECOMMENDATIONS.length} past recommendations
+              {filtered.length}{filtered.length < PAST_RECOMMENDATIONS.length ? ` of ${PAST_RECOMMENDATIONS.length}` : ''} past recommendations
             </span>
           </div>
           <p className="text-sm text-slate-500 pl-7">
@@ -55,6 +58,26 @@ export default function KnowledgeBase() {
           <X className="w-4 h-4" />
           Close
         </button>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by title, summary, or business unit…"
+          className="w-full bg-surface border border-border-strong rounded-xl pl-9 pr-10 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-colors"
+        />
+        {query && (
+          <button
+            onClick={() => setQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Filters */}
