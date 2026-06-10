@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  ChevronDown,
   ChevronRight,
   FileText,
   Download,
@@ -19,6 +20,7 @@ import { useRecoStore } from '@/store'
 import { useUIStore } from '@/store/uiStore'
 import AgentPanel from '@/components/AgentPanel'
 import RecoCard from '@/components/RecoCard'
+import SignatureBlock, { SIG_TIERS } from '@/components/SignatureBlock'
 import StatusBadge from '@/components/StatusBadge'
 import ReadinessMeter from '@/components/ReadinessMeter'
 import Timeline from '@/components/Timeline'
@@ -299,8 +301,79 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
       doc.line(ML + 8, y - 0.5, W - MR, y - 0.5)
       y += 2.5
 
-      // Body text indented under number badge
-      para(section.body, 8.5, MED, 8, false, 3)
+      // Body text
+      if (section.id === 's11') {
+        // Signature table — render dynamically from reco state
+        const allSlots = SIG_TIERS.flatMap((t) => t.slots)
+        const signedCount = allSlots.filter((s) => s.signed(reco)).length
+
+        needY(6)
+        doc.setFontSize(7.5)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...(signedCount === allSlots.length ? GREEN : AMBER))
+        doc.text(`${signedCount} of ${allSlots.length} signatures collected`, ML + 8, y)
+        y += 6
+
+        for (const tier of SIG_TIERS) {
+          needY(8)
+          doc.setFontSize(6.5)
+          doc.setFont('helvetica', 'bold')
+          doc.setTextColor(...LIGHT)
+          doc.text(san(tier.label).toUpperCase(), ML + 8, y)
+          y += 4.5
+
+          for (const slot of tier.slots) {
+            const isSigned = slot.signed(reco)
+            const isBypassed = slot.bypassed(reco)
+            const name = isSigned ? slot.getName(reco) : null
+            const ts = isSigned ? slot.getTs(reco) : undefined
+
+            needY(7)
+
+            if (isSigned) {
+              doc.setFillColor(236, 253, 243)
+              doc.roundedRect(ML + 8, y - 4.5, CW - 8, 6, 0.5, 0.5, 'F')
+
+              doc.setFontSize(7.5)
+              doc.setFont('helvetica', 'bold')
+              doc.setTextColor(...TEXT)
+              const nameStr = san(name ?? slot.role)
+              doc.text(nameStr, ML + 11, y)
+
+              doc.setFont('helvetica', 'normal')
+              doc.setTextColor(...LIGHT)
+              const roleStr = san(slot.role) + (ts ? '  ' + new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '')
+              const nameW = doc.getTextWidth(nameStr)
+              const roleX = ML + 11 + nameW + 3
+              if (roleX < W - MR - 30) doc.text(roleStr, roleX, y)
+
+              doc.setFont('helvetica', 'bold')
+              doc.setTextColor(...GREEN)
+              doc.text('SIGNED', W - MR - 4, y, { align: 'right' })
+            } else if (isBypassed) {
+              doc.setFontSize(7.5)
+              doc.setFont('helvetica', 'italic')
+              doc.setTextColor(...AMBER)
+              doc.text(san(slot.role), ML + 11, y)
+              doc.setFont('helvetica', 'bold')
+              doc.text('BYPASSED', W - MR - 4, y, { align: 'right' })
+            } else {
+              doc.setFontSize(7.5)
+              doc.setFont('helvetica', 'italic')
+              doc.setTextColor(...LIGHT)
+              doc.text(san(slot.role), ML + 11, y)
+              doc.setFont('helvetica', 'normal')
+              doc.text('pending', W - MR - 4, y, { align: 'right' })
+            }
+
+            y += 7
+          }
+          y += 2
+        }
+        y += 1
+      } else {
+        para(section.body, 8.5, MED, 8, false, 3)
+      }
 
       y += 2
     })
@@ -367,15 +440,46 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
   // ════════════════════════════════════════════════
 
   if (reco.regulatoryRefs.length > 0) {
-    needY(14)
+    needY(20)
     y += 2
     hRule(BORDER, 0.25, 5)
     heading('Regulatory References')
-    doc.setFontSize(8.5)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(...MED)
-    doc.text(reco.regulatoryRefs.map(r => san(r)).join('   ·   '), ML, y)
-    y += 6
+
+    const PILL_H = 6
+    const PAD_H  = 3.5
+    const GAP_H  = 2.5
+    const GAP_V  = 3
+    const PILL_BG:     [n,n,n] = [239, 246, 255]
+    const PILL_BORDER: [n,n,n] = [186, 215, 248]
+    const PILL_TEXT:   [n,n,n] = [37, 99, 195]
+
+    doc.setFontSize(7.5)
+    doc.setFont('helvetica', 'bold')
+
+    let cx = ML
+    needY(PILL_H + 2)
+
+    reco.regulatoryRefs.forEach((ref) => {
+      const txt = san(ref)
+      const pw  = doc.getTextWidth(txt) + PAD_H * 2
+
+      if (cx > ML && cx + pw > W - MR) {
+        y += PILL_H + GAP_V
+        needY(PILL_H + 2)
+        cx = ML
+      }
+
+      doc.setFillColor(...PILL_BG)
+      doc.setDrawColor(...PILL_BORDER)
+      doc.setLineWidth(0.15)
+      doc.roundedRect(cx, y - PILL_H + 1.5, pw, PILL_H, 1, 1, 'FD')
+      doc.setTextColor(...PILL_TEXT)
+      doc.text(txt, cx + PAD_H, y)
+
+      cx += pw + GAP_H
+    })
+
+    y += PILL_H + 6
   }
 
   // ════════════════════════════════════════════════
@@ -709,6 +813,7 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
 
   const [agentOutput, setAgentOutput] = useState<ReadinessOutput | null>(null)
   const [chairmanOpen, setChairmanOpen] = useState(false)
+  const [docOpen, setDocOpen] = useState(false)
 
   const handleAgentComplete = useCallback(
     (output: unknown) => {
@@ -769,13 +874,27 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
             {reco.businessUnit} · {reco.owner}
           </p>
         </div>
-        <div
-          className={`flex items-center gap-1.5 text-sm font-semibold shrink-0 ${
-            days <= 0 ? 'text-red-600' : days <= 7 ? 'text-amber-600' : 'text-slate-500'
-          }`}
-        >
-          <Clock className="w-4 h-4" />
-          {days <= 0 ? 'Overdue' : `BoD in ${days}d`}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div
+            className={`flex items-center gap-1.5 text-sm font-semibold ${
+              days <= 0 ? 'text-red-600' : days <= 7 ? 'text-amber-600' : 'text-slate-500'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            {days <= 0 ? 'Overdue' : `BoD in ${days}d`}
+          </div>
+          {reco.contentSections.length > 0 && (
+            <button
+              onClick={() => setDocOpen((v) => !v)}
+              className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 border border-border-subtle rounded-lg px-3 py-1.5 hover:bg-surface-raised transition-colors"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              {docOpen ? 'Hide document' : 'View document'}
+              <motion.span animate={{ rotate: docOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <ChevronDown className="w-3 h-3" />
+              </motion.span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -818,6 +937,16 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
 
           {/* Completeness checklist */}
           <CompletenessChecklist reco={reco} />
+
+          {/* Signature block — only for recos with s11 (hero path) */}
+          {reco.contentSections.some((s) => s.id === 's11') && (
+            <div className="bg-surface border border-border-subtle rounded-xl p-4">
+              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium mb-3">
+                Signatures &amp; Co-signatures
+              </p>
+              <SignatureBlock reco={reco} />
+            </div>
+          )}
 
           {/* Readiness score */}
           <AnimatePresence>
@@ -1008,6 +1137,105 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
           )}
         </div>
       </div>
+
+      {/* Collapsible document view */}
+      <AnimatePresence>
+        {docOpen && reco.contentSections.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22 }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-4 pt-2 border-t border-border-subtle">
+              <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide pt-2">
+                Recommendation Document
+              </h2>
+
+              {/* Formal header block */}
+              <div className="bg-surface-raised border border-border-strong rounded-xl p-4">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                  <div>
+                    <span className="text-slate-400 font-medium">Proposing Business Unit:</span>
+                    <span className="ml-2 text-slate-700">{reco.businessUnit}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium">Protocol No.:</span>
+                    <span className="ml-2 font-mono text-slate-700">EIS-2026-{reco.id.slice(-4).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium">Contact:</span>
+                    <span className="ml-2 text-slate-700">{reco.owner} · 210 490 0000</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium">Date:</span>
+                    <span className="ml-2 text-slate-700">
+                      {new Date(reco.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-slate-400 font-medium">Email:</span>
+                    <span className="ml-2 text-slate-700">trading@ppcgroup.com</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Regulatory refs */}
+              {reco.regulatoryRefs.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {reco.regulatoryRefs.map((ref) => (
+                    <span
+                      key={ref}
+                      className="bg-brand-subtle text-brand text-xs font-medium px-2.5 py-0.5 rounded-full border border-brand/20"
+                    >
+                      {ref}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Sections — read-only */}
+              <div className="space-y-3">
+                {reco.contentSections.map((section, idx) => (
+                  <div
+                    key={section.id}
+                    className="bg-surface rounded-xl p-4 border border-border-subtle"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-5 h-5 rounded-full bg-surface-raised text-[10px] font-bold text-slate-500 flex items-center justify-center flex-shrink-0">
+                        {idx + 1}
+                      </span>
+                      <h3 className="text-sm font-semibold text-slate-700">{section.title}</h3>
+                    </div>
+                    {section.id === 's11' ? (
+                      <div className="pl-7 mt-1">
+                        <SignatureBlock reco={reco} />
+                      </div>
+                    ) : (
+                      <p className="text-sm leading-relaxed pl-7 text-slate-600 whitespace-pre-wrap">
+                        {section.body}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Draft resolution — only if no s10 section */}
+              {reco.draftResolution && !reco.contentSections.some((s) => s.id === 's10') && (
+                <div className="bg-surface-raised border border-border-strong rounded-xl p-4">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium mb-2">
+                    Draft Resolution
+                  </p>
+                  <p className="text-sm text-slate-700 leading-relaxed italic whitespace-pre-wrap">
+                    {reco.draftResolution}
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Chairman modal */}
       <AnimatePresence>

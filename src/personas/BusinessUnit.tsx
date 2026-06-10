@@ -6,6 +6,7 @@ import {
   ChevronDown,
   AlertTriangle,
   CheckCircle2,
+  FileText,
   RotateCcw,
   MessageSquare,
   Send,
@@ -21,6 +22,7 @@ import { useRecoStore } from '@/store'
 import { useUIStore } from '@/store/uiStore'
 import AgentPanel from '@/components/AgentPanel'
 import RecoCard from '@/components/RecoCard'
+import SignatureBlock from '@/components/SignatureBlock'
 import StatusBadge from '@/components/StatusBadge'
 import Timeline from '@/components/Timeline'
 import { draftingAgentScript } from '@/agents/scripts'
@@ -638,7 +640,7 @@ function BUDraftView({
                               Writing…
                             </motion.span>
                           )}
-                          {!typing_ && editingSectionId !== section.id && (
+                          {!typing_ && editingSectionId !== section.id && section.id !== 's11' && (
                             <button
                               onClick={() => { setEditingSectionId(section.id); setEditBody(displayBody) }}
                               title="Edit manually"
@@ -649,7 +651,11 @@ function BUDraftView({
                           )}
                         </div>
                       </div>
-                      {editingSectionId === section.id ? (
+                      {section.id === 's11' ? (
+                        <div className="pl-7 mt-1">
+                          <SignatureBlock reco={reco} />
+                        </div>
+                      ) : editingSectionId === section.id ? (
                         <div className="pl-7 space-y-1.5">
                           <textarea
                             value={editBody}
@@ -995,6 +1001,8 @@ function BUFeedbackView({
 }) {
   const reco = useRecoStore((s) => s.recommendations.find((r) => r.id === recoId))
   const submitToSecretariat = useRecoStore((s) => s.submitToSecretariat)
+  const [docOpen, setDocOpen] = useState(false)
+  const [activeRef, setActiveRef] = useState<string | null>(null)
 
   if (!reco) return null
 
@@ -1025,7 +1033,21 @@ function BUFeedbackView({
             {reco.businessUnit} · {reco.owner}
           </p>
         </div>
-        <StatusBadge status={reco.status} />
+        <div className="flex items-center gap-2.5 shrink-0">
+          <StatusBadge status={reco.status} />
+          {reco.contentSections.length > 0 && (
+            <button
+              onClick={() => setDocOpen((v) => !v)}
+              className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 border border-border-subtle rounded-lg px-3 py-1.5 hover:bg-surface-raised transition-colors"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              {docOpen ? 'Hide document' : 'View document'}
+              <motion.span animate={{ rotate: docOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <ChevronDown className="w-3 h-3" />
+              </motion.span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1131,6 +1153,103 @@ function BUFeedbackView({
           <Timeline entries={reco.auditLog} />
         </div>
       </div>
+
+      {/* Collapsible document view */}
+      <AnimatePresence>
+        {docOpen && reco.contentSections.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22 }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-4 pt-2 border-t border-border-subtle">
+              <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide pt-2">
+                Recommendation Document
+              </h2>
+
+              {/* Formal header block */}
+              <div className="bg-surface-raised border border-border-strong rounded-xl p-4">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                  <div>
+                    <span className="text-slate-400 font-medium">Proposing Business Unit:</span>
+                    <span className="ml-2 text-slate-700">{reco.businessUnit}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium">Protocol No.:</span>
+                    <span className="ml-2 font-mono text-slate-700">EIS-2026-{reco.id.slice(-4).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium">Contact:</span>
+                    <span className="ml-2 text-slate-700">{reco.owner} · 210 490 0000</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 font-medium">Date:</span>
+                    <span className="ml-2 text-slate-700">
+                      {new Date(reco.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-slate-400 font-medium">Email:</span>
+                    <span className="ml-2 text-slate-700">trading@ppcgroup.com</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Regulatory refs */}
+              {reco.regulatoryRefs.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {reco.regulatoryRefs.map((ref) => (
+                    <RegulatoryRefBadge
+                      key={ref}
+                      refKey={ref}
+                      isOpen={activeRef === ref}
+                      onToggle={() => setActiveRef(activeRef === ref ? null : ref)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Sections — read-only */}
+              <div className="space-y-3">
+                {reco.contentSections.map((section, idx) => (
+                  <div
+                    key={section.id}
+                    className="bg-surface rounded-xl p-4 border border-border-subtle"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-5 h-5 rounded-full bg-surface-raised text-[10px] font-bold text-slate-500 flex items-center justify-center flex-shrink-0">
+                        {idx + 1}
+                      </span>
+                      <h3 className="text-sm font-semibold text-slate-700">{section.title}</h3>
+                    </div>
+                    {section.id === 's11' ? (
+                      <div className="pl-7 mt-1">
+                        <SignatureBlock reco={reco} />
+                      </div>
+                    ) : (
+                      <p className="text-sm leading-relaxed pl-7 text-slate-600 whitespace-pre-wrap">
+                        {section.body}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Draft resolution — only if no s10 section */}
+              {reco.draftResolution && !reco.contentSections.some((s) => s.id === 's10') && (
+                <div className="bg-surface-raised border border-border-strong rounded-xl p-4">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium mb-2">
+                    Draft Resolution
+                  </p>
+                  <p className="text-sm text-slate-700 leading-relaxed italic">{reco.draftResolution}</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -1509,7 +1628,7 @@ function BUUpdateView({
                         Updated
                       </motion.span>
                     )}
-                    {!typing_ && editingSectionId !== section.id && (
+                    {!typing_ && editingSectionId !== section.id && section.id !== 's11' && (
                       <button
                         onClick={() => { setEditingSectionId(section.id); setEditBody(displayBody) }}
                         title="Edit manually"
@@ -1520,7 +1639,11 @@ function BUUpdateView({
                     )}
                   </div>
                 </div>
-                {editingSectionId === section.id ? (
+                {section.id === 's11' ? (
+                  <div className="pl-7 mt-1">
+                    <SignatureBlock reco={reco} />
+                  </div>
+                ) : editingSectionId === section.id ? (
                   <div className="pl-7 space-y-1.5">
                     <textarea
                       value={editBody}

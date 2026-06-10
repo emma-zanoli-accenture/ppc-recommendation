@@ -93,7 +93,7 @@ const templateSections: ContentSection[] = [
   {
     id: 's11',
     title: 'Signatures & Approvals',
-    body: 'HIERARCHY\n  Submitted by: Alexandros Papadimitriou, Director, Trading & Origination\n  Co-signed: Maria Stavropoulou, Division Manager, International Trading & Regulatory Affairs\n\nPARALLEL BODIES\n  Nikolaos Constantinou, Director, Legal Department\n  Eleni Georgiou, Director, Finance & Treasury\n  Ioannis Tsirikos, Director, Regulatory Affairs\n\nGROUP GENERAL DIRECTORS\n  Georgios Lamprakis, Group General Director, Energy Trading & International Development\n  Sofia Andriopoulou, Group General Director, Finance\n\nLEGAL COUNSEL / GD LEGAL AFFAIRS & CORPORATE GOVERNANCE\n  Vasileios Oikonomou, Legal Counsel / Group GD Legal Affairs & Corporate Governance',
+    body: '[Signature block — 7 slots across 4 tiers (Hierarchy, Parallel Bodies, Group General Directors, Legal Counsel / GD Corp Gov). Slots populate progressively as each function approves.]',
   },
 ]
 
@@ -156,14 +156,14 @@ export const draftingAgentScript: AgentScript = {
     'Referencing ACER guidance on cross-border capacity allocation',
     'Adding RAAEY prior notification requirement (L.4001/2011 Art. 11)',
     'Generating draft BoD resolution with conditions precedent — section 10',
-    'Inserting signature block with role hierarchy — section 11',
+    'Inserting signature skeleton — 7 slots across 4 tiers, populates as approvals are collected',
     'Running gap analysis — sections 6, 7, 8 require completion',
   ],
   result: `Template scaffolded across 11 sections (PPC εισήγηση format). Sections 1–5 and 9–11 are fully drafted. Sections 6, 7, and 8 require completion via the assisted-drafting items below.
 
 3 suggested integrations identified: full regulatory framework with REMIT/EMIR/RAAEY/MiFID II (→ sec. 2), implementation milestones Q3 2026–mid-2027 (→ sec. 6), and 4-risk framework with mitigants (→ sec. 3). 2 information gaps detected: budget/OPEX/cost centre missing from Finance/Treasury (→ sec. 7), counterparty KYC and authorizations pending (→ sec. 8).
 
-Draft BoD resolution (sec. 10) includes conditions precedent: ACER acknowledgement, RAAEY notification, Credit Support Annex. Signature block (sec. 11) complete with role hierarchy.
+Draft BoD resolution (sec. 10) includes conditions precedent: ACER acknowledgement, RAAEY notification, Credit Support Annex. Signature block (sec. 11) scaffolded — 7 pending slots across 4 tiers; slots fill progressively as each function approves.
 
 Click "Apply" on each item to insert the pre-written content, or click "Auto-complete draft" to resolve all at once.`,
   structuredOutput: {
