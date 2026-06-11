@@ -66,6 +66,9 @@ const FN_LABELS: Record<ReviewFunction, string> = {
   chairman: 'Chairman',
 }
 
+// Readiness points deducted per open point (requested-but-pending evidence) imported from the audit log
+const EVIDENCE_OPEN_POINT_PENALTY = 5
+
 // ─── PDF generator ────────────────────────────────────────────────────────────
 
 function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
@@ -1175,7 +1178,12 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
       if (!output) return
       const o = output as ReadinessOutput
       setAgentOutput(o)
-      updateReadinessScore(recoId, o.readinessScore)
+      // Open points imported from the activity log (requested-but-pending evidence) each shave a
+      // few points off the readiness score.
+      const current = useRecoStore.getState().recommendations.find((r) => r.id === recoId)
+      const openPoints = current?.evidenceRequests?.length ?? 0
+      const adjusted = Math.max(0, o.readinessScore - openPoints * EVIDENCE_OPEN_POINT_PENALTY)
+      updateReadinessScore(recoId, adjusted)
     },
     [recoId, updateReadinessScore]
   )
@@ -1203,8 +1211,13 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
   const isReady = reco.status === 'Ready for BoD'
   const isSubmitted = reco.status === 'Submitted to BoD'
 
-  const residualGaps = agentOutput?.residualGaps ?? []
+  // Open points imported from the activity log — evidence requested but not yet received
+  const openEvidence = reco.evidenceRequests ?? []
   const completedItems = agentOutput?.completedItems ?? []
+  const residualGaps = [
+    ...(agentOutput?.residualGaps ?? []),
+    ...openEvidence.map((label) => `${label} — requested via activity log, awaiting receipt`),
+  ]
 
   return (
     <div className="space-y-6">
@@ -1350,6 +1363,28 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
 
           {/* Completeness checklist */}
           <CompletenessChecklist reco={reco} />
+
+          {/* Open points — imported from the activity log (requested-but-pending evidence) */}
+          {openEvidence.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
+              <p className="text-[10px] uppercase tracking-widest text-amber-600 font-medium flex items-center gap-1.5">
+                <AlertTriangle className="w-3 h-3" />
+                Open Points · from activity log ({openEvidence.length})
+              </p>
+              {openEvidence.map((label, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <Clock className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-amber-700 leading-snug">{label}</p>
+                    <p className="text-[10px] text-amber-600/80 leading-snug mt-0.5">
+                      Requested by the owner — awaiting receipt. Lowers the readiness score by{' '}
+                      {EVIDENCE_OPEN_POINT_PENALTY} pts until cleared.
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Signature block — only for recos with s11 (hero path) */}
           {reco.contentSections.some((s) => s.id === 's11') && (

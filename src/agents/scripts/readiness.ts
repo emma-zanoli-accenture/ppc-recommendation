@@ -19,20 +19,18 @@ export const readinessAgentScript: AgentScript = {
     'Confirming Legal review status: Approved with conditions',
     'Confirming Finance review status: Approved with note',
     'Confirming Compliance review status: Approved',
+    'Confirming Chairman sign-off',
     'Scanning open comments — checking for unresolved items',
+    'Importing open points from the activity log',
     'Verifying BoD deadline — computing days remaining',
     'Computing readiness score',
     'Assembling BoD pack',
   ],
-  result: `Readiness assessment complete. Score: 100 / 100.
+  result: `Readiness assessment complete. All 11 content sections are present and complete, and the mandatory draft resolution is valid, correctly formatted and Board-ready. All review functions and the Chairman have signed off: Legal (approved with conditions — documented in the draft resolution), Finance (approved with note — FX hedging recorded), Compliance (approved with recommendation), Chairman (signed off).
 
-All 11 content sections are present and complete. The mandatory draft resolution is valid, correctly formatted, and Board-ready. All three review functions have provided their approvals: Legal (approved with conditions — 3 items documented and addressed in the draft resolution), Finance (approved with note — FX hedging note recorded), Compliance (approved with recommendation — post-implementation report incorporated).
+Open points are imported from the recommendation's activity log: any supporting evidence that has been requested but not yet received is treated as a minor residual gap and is reflected in the readiness score below.
 
-Score breakdown: content completeness 25/25, draft resolution 25/25, legal review 20/20, finance review 15/15, compliance review 15/15. No residual gaps.
-
-BoD deadline: within the current planning window. Pack assembled: 6 documents.
-
-Recommendation is Ready for BoD. The Corporate Secretary may now schedule the item on the Board agenda.`,
+BoD deadline is within the current planning window. Pack assembled: 6 documents. The Corporate Secretary may schedule the item once the open points are cleared.`,
   structuredOutput: {
     readinessScore: 100,
     completedItems: [
@@ -41,6 +39,7 @@ Recommendation is Ready for BoD. The Corporate Secretary may now schedule the it
       'Legal review: Approved with conditions (documented)',
       'Finance review: Approved with note (documented)',
       'Compliance review: Approved (recommendation incorporated)',
+      'Chairman sign-off recorded',
     ],
     residualGaps: [],
     bodPackItems: [

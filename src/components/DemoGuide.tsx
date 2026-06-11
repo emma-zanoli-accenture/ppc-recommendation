@@ -37,9 +37,6 @@ export default function DemoGuide() {
         >
           <BookOpen className="w-4 h-4 text-brand" />
           Guide
-          <span className="text-[10px] text-slate-400">
-            {demoStep + 1}/{total}
-          </span>
         </motion.button>
       ) : (
         <motion.aside

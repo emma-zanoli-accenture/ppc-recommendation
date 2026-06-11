@@ -756,7 +756,9 @@ function RFReviewView({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:space-y-0 lg:h-[calc(100vh-8rem)] lg:flex lg:flex-col">
+      {/* Top: breadcrumb + banner + header (fixed) */}
+      <div className="shrink-0 space-y-6 lg:space-y-4 lg:pb-2">
       {/* Breadcrumb */}
       <div className="flex items-center gap-3">
         <button
@@ -836,9 +838,11 @@ function RFReviewView({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Document sections */}
-        <div className="lg:col-span-2 space-y-4">
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:flex-1 lg:min-h-0">
+        {/* Document sections (left pane, scrolls independently) */}
+        <div className="lg:col-span-2 space-y-4 lg:overflow-y-auto lg:min-h-0 lg:pr-2">
           <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
             Document
           </h2>
@@ -922,8 +926,8 @@ function RFReviewView({
           </div>
         </div>
 
-        {/* Right: agent + action */}
-        <div className="space-y-4">
+        {/* Right pane: agent + action (scrolls independently) */}
+        <div className="space-y-4 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
           <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
             {fnCfg.agent ? `${fnCfg.label} Review Agent` : 'Chairman Sign-off'}
           </h2>

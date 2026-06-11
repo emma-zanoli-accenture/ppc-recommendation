@@ -43,6 +43,7 @@ import { RESOLUTION_STUB } from '@/agents/scripts/drafting'
 import type { DraftingOutput, DraftSuggestion } from '@/agents/scripts/drafting'
 import type { ResolutionOutput, EvidenceOutput } from '@/agents/scripts/assistants'
 import { DOC_META } from '@/components/AttachmentList'
+import SaveControl from '@/components/SaveControl'
 import {
   DOCS_BY_ID,
   EVIDENCE_MATCH_IDS,
@@ -884,28 +885,35 @@ function BUDraftView({
   const isHovered = (sectionId: string) => hoverSectionId === sectionId
 
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Dashboard
-        </button>
-        <span className="text-slate-300">/</span>
-        <StatusBadge status={reco.status} />
+    <div className="space-y-6 lg:space-y-0 lg:h-[calc(100vh-8rem)] lg:flex lg:flex-col">
+      {/* Top: breadcrumb + title (fixed) */}
+      <div className="shrink-0 space-y-4 lg:pb-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Dashboard
+          </button>
+          <span className="text-slate-300">/</span>
+          <StatusBadge status={reco.status} />
+          {hasSections && (
+            <div className="ml-auto">
+              <SaveControl />
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-800">{reco.title}</h1>
+          <p className="text-slate-500 text-sm mt-1">{reco.businessUnit} · {reco.owner}</p>
+        </div>
       </div>
 
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-800">{reco.title}</h1>
-        <p className="text-slate-500 text-sm mt-1">{reco.businessUnit} · {reco.owner}</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ── Document ────────────────────────────────────────────── */}
-        <div className="lg:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:flex-1 lg:min-h-0">
+        {/* ── Document (left pane, scrolls independently) ──────────── */}
+        <div className="lg:col-span-2 space-y-4 lg:overflow-y-auto lg:min-h-0 lg:pr-2">
           {!hasSections ? (
             <div className="bg-surface border border-dashed border-border-strong rounded-xl p-10 text-center space-y-2">
               <p className="text-slate-500 text-sm font-medium">
@@ -1091,8 +1099,8 @@ function BUDraftView({
           )}
         </div>
 
-        {/* ── Right column: Agent + Assisted drafting ──────────────── */}
-        <div className="space-y-4">
+        {/* ── Right pane: agents + tasks (scrolls independently) ───── */}
+        <div className="space-y-4 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
           <div>
             <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Recommendation Assistant</h2>
             <p className="text-[11px] text-slate-400 mt-0.5 normal-case">drafting specialist · orchestrated by Recopilot</p>
@@ -1241,13 +1249,13 @@ function BUDraftView({
         </div>
       </div>
 
-      {/* Footer CTA */}
+      {/* Footer CTA (fixed) */}
       <AnimatePresence>
         {hasSections && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between pt-4 border-t border-border-subtle"
+            className="shrink-0 flex items-center justify-between pt-4 lg:mt-4 border-t border-border-subtle"
           >
             <div>
               <AnimatePresence mode="wait">
@@ -1952,7 +1960,9 @@ function BUUpdateView({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:space-y-0 lg:h-[calc(100vh-8rem)] lg:flex lg:flex-col">
+      {/* Top: back + title + returned context (fixed) */}
+      <div className="shrink-0 space-y-4 lg:pb-4">
       <button
         onClick={onBack}
         className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
@@ -1966,7 +1976,10 @@ function BUUpdateView({
           <h1 className="text-xl font-semibold text-slate-800">Review Legal Feedback</h1>
           <p className="text-slate-500 text-sm mt-1 line-clamp-1">{reco.title}</p>
         </div>
-        <StatusBadge status={reco.status} />
+        <div className="flex items-center gap-3 shrink-0">
+          <SaveControl />
+          <StatusBadge status={reco.status} />
+        </div>
       </div>
 
       {/* Returned comment (collapsible context) */}
@@ -1990,10 +2003,11 @@ function BUUpdateView({
           </button>
         </div>
       )}
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ── Document ────────────────────────────────────────────── */}
-        <div className="lg:col-span-2 space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:flex-1 lg:min-h-0">
+        {/* ── Document (left pane, scrolls independently) ──────────── */}
+        <div className="lg:col-span-2 space-y-3 lg:overflow-y-auto lg:min-h-0 lg:pr-2">
           {/* Formal header block */}
           {reco.contentSections.length > 0 && (
             <div className="bg-surface-raised border border-border-strong rounded-xl p-4">
@@ -2165,8 +2179,8 @@ function BUUpdateView({
           )}
         </div>
 
-        {/* ── Right column: Legal Comments ─────────────────────────── */}
-        <div className="space-y-4">
+        {/* ── Right pane: Feedback Co-Pilot (scrolls independently) ── */}
+        <div className="space-y-4 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
           <div>
             <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Legal Feedback</h2>
             <p className="text-[11px] text-slate-400 mt-0.5 normal-case">consolidated by the Feedback Co-Pilot · orchestrated by Recopilot</p>
