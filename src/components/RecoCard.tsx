@@ -11,7 +11,7 @@ interface Props {
   index?: number
 }
 
-const REVIEW_LABELS = { legal: 'Legal', finance: 'Finance', compliance: 'Compliance' }
+const REVIEW_LABELS = { legal: 'Legal', finance: 'Finance', compliance: 'Compliance', chairman: 'Chairman' }
 
 const REVIEW_STATUS_CLASSES: Record<string, string> = {
   Pending: 'bg-slate-100 text-slate-400 border-slate-200',
@@ -52,10 +52,10 @@ export default function RecoCard({ recommendation: r, onClick, index = 0 }: Prop
       {/* Title */}
       <h3 className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2">{r.title}</h3>
 
-      {/* Bottom row */}
-      <div className="flex items-center justify-between mt-auto pt-1">
+      {/* Bottom area */}
+      <div className="mt-auto pt-1 space-y-2">
         {/* Review chips */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           {(Object.keys(REVIEW_LABELS) as (keyof typeof REVIEW_LABELS)[]).map((fn) => {
             const status = r.reviews[fn].status
             return (
@@ -71,7 +71,7 @@ export default function RecoCard({ recommendation: r, onClick, index = 0 }: Prop
         </div>
 
         {/* Readiness + deadline */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between">
           <DeadlineChip dateStr={r.bodDeadline} />
           <ReadinessMeter score={r.readinessScore} size="sm" />
         </div>

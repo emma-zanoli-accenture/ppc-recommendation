@@ -4,7 +4,7 @@ export { financeReviewAgentScript } from './financeReview'
 export { complianceReviewAgentScript } from './complianceReview'
 export { readinessAgentScript } from './readiness'
 export {
-  historicalCaseAgentScript,
+  knowledgeRetrievalAssistantScript,
   resolutionAssistantScript,
   evidenceCollectionAgentScript,
   reviewPlanningAgentScript,

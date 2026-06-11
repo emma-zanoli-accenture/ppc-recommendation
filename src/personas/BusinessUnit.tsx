@@ -20,6 +20,7 @@ import {
   Search,
   Paperclip,
   Star,
+  ScrollText,
 } from 'lucide-react'
 import { useRecoStore } from '@/store'
 import { useUIStore } from '@/store/uiStore'
@@ -30,7 +31,7 @@ import StatusBadge from '@/components/StatusBadge'
 import Timeline from '@/components/Timeline'
 import {
   draftingAgentScript,
-  historicalCaseAgentScript,
+  knowledgeRetrievalAssistantScript,
   resolutionAssistantScript,
   evidenceCollectionAgentScript,
   reviewPlanningAgentScript,
@@ -159,6 +160,71 @@ function RegulatoryRefBadge({
             <p className="text-xs text-slate-600 leading-relaxed">{info?.description}</p>
             <p className="text-[10px] text-slate-400 border-t border-border-subtle pt-1.5 flex items-center gap-1">
               <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+              {info?.source}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// ─── Internal policy reference data & badge ──────────────────────────────────
+// Distinct from regulations: internal PPC policies, shown in a slate/document style so they
+// are not confused with the (brand-blue) external regulation badges.
+
+const POLICY_REF_INFO: Record<string, { fullName: string; description: string; source: string }> = {
+  'PPC Group Trading Policy v4.2': {
+    fullName: 'PPC Group Trading Policy v4.2',
+    description: 'Internal policy defining permitted trading instruments (Schedule A), commercial thresholds and approval levels for energy trading activity.',
+    source: 'Internal Policy · PPC Group Corporate Governance',
+  },
+  'Group Authorisation Matrix (2025)': {
+    fullName: 'Group Authorisation Matrix (GAM) — 2025 revision',
+    description: 'Delegation-of-authority matrix setting approval levels by value and transaction type. Bilateral trading agreements above EUR 10M require Board of Directors approval; no sub-delegation permitted.',
+    source: 'Internal Policy · PPC Group Corporate Governance',
+  },
+}
+
+function PolicyBadge({
+  policyKey,
+  isOpen,
+  onToggle,
+}: {
+  policyKey: string
+  isOpen: boolean
+  onToggle: () => void
+}) {
+  const info = POLICY_REF_INFO[policyKey]
+  return (
+    <div className="relative">
+      <button
+        onClick={onToggle}
+        className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-all ${
+          isOpen
+            ? 'bg-slate-600 text-white border-slate-600 shadow-sm'
+            : 'bg-surface-raised text-slate-600 border-border-strong hover:border-slate-400 hover:bg-surface'
+        }`}
+      >
+        <ScrollText className="w-3 h-3 flex-shrink-0" />
+        <span>{policyKey}</span>
+        <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown className="w-3 h-3 flex-shrink-0" />
+        </motion.span>
+      </button>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+            className="absolute left-0 top-full mt-1.5 z-30 w-64 bg-surface border border-border-strong rounded-xl shadow-lg p-3 space-y-1.5"
+          >
+            <p className="text-xs font-semibold text-slate-800 leading-snug">{info?.fullName ?? policyKey}</p>
+            <p className="text-xs text-slate-600 leading-relaxed">{info?.description}</p>
+            <p className="text-[10px] text-slate-400 border-t border-border-subtle pt-1.5 flex items-center gap-1">
+              <ScrollText className="w-2.5 h-2.5 flex-shrink-0" />
               {info?.source}
             </p>
           </motion.div>
@@ -354,16 +420,16 @@ function BUCreate({ onBack, onCreate }: { onBack: () => void; onCreate: (id: str
         </div>
       </div>
 
-      {/* Step 1 · Historical Case Assistant — precedent retrieval */}
+      {/* Step 1 · Knowledge Retrieval Assistant — precedent retrieval */}
       <div className="space-y-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Historical Case Assistant</h2>
+          <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Knowledge Retrieval Assistant</h2>
           <p className="text-[11px] text-slate-400 mt-0.5 normal-case">
             retrieves similar past recommendations as precedent · orchestrated by Recopilot
           </p>
         </div>
         <AgentPanel
-          script={historicalCaseAgentScript}
+          script={knowledgeRetrievalAssistantScript}
           inputs={{
             business_need: (businessNeed || EXAMPLE_BUSINESS_NEED).slice(0, 80) + '…',
             scope: 'Cross-border energy trading · Greece–Romania',
@@ -481,6 +547,7 @@ function EvidenceResultsPanel({
   const attachedRecommended = RECOMMENDED_DOC_IDS.filter((id) => attached.has(id)).length
   const total = RECOMMENDED_DOC_IDS.length
   const allRecommendedAttached = attachedRecommended === total
+  const [activeRef, setActiveRef] = useState<string | null>(null)
 
   return (
     <motion.div
@@ -583,12 +650,31 @@ function EvidenceResultsPanel({
           <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
             Applicable policies &amp; regulations
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {EVIDENCE_POLICIES.map((p) => (
-              <span key={p} className="text-[10px] font-medium text-brand bg-brand-subtle border border-brand/20 px-2 py-0.5 rounded-full">
-                {p}
-              </span>
-            ))}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {EVIDENCE_POLICIES.map((p) =>
+              REG_REF_INFO[p] ? (
+                <RegulatoryRefBadge
+                  key={p}
+                  refKey={p}
+                  isOpen={activeRef === p}
+                  onToggle={() => setActiveRef(activeRef === p ? null : p)}
+                />
+              ) : POLICY_REF_INFO[p] ? (
+                <PolicyBadge
+                  key={p}
+                  policyKey={p}
+                  isOpen={activeRef === p}
+                  onToggle={() => setActiveRef(activeRef === p ? null : p)}
+                />
+              ) : (
+                <span
+                  key={p}
+                  className="text-[10px] font-medium text-brand bg-brand-subtle border border-brand/20 px-2 py-0.5 rounded-full"
+                >
+                  {p}
+                </span>
+              )
+            )}
           </div>
         </div>
 
@@ -823,7 +909,7 @@ function BUDraftView({
           {!hasSections ? (
             <div className="bg-surface border border-dashed border-border-strong rounded-xl p-10 text-center space-y-2">
               <p className="text-slate-500 text-sm font-medium">
-                Run the Recommendation Co-Pilot to scaffold the recommendation document.
+                Run the Recommendation Assistant to scaffold the recommendation document.
               </p>
               <p className="text-xs text-slate-400 italic">
                 11 sections (PPC εισήγηση format) · regulatory framework · draft resolution
@@ -1008,7 +1094,7 @@ function BUDraftView({
         {/* ── Right column: Agent + Assisted drafting ──────────────── */}
         <div className="space-y-4">
           <div>
-            <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Recommendation Co-Pilot</h2>
+            <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Recommendation Assistant</h2>
             <p className="text-[11px] text-slate-400 mt-0.5 normal-case">drafting specialist · orchestrated by Recopilot</p>
           </div>
           <AgentPanel

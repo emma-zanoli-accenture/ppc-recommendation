@@ -7,21 +7,21 @@ import { EVIDENCE_MATCH_IDS, MISSING_EVIDENCE, type MissingEvidence } from '../.
 // All output is precompiled and deterministic — no live calls.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── Step 1 · Historical Case Assistant ──────────────────────────────────────
-export interface HistoricalMatch {
+// ── Step 1 · Knowledge Retrieval Assistant ───────────────────────────────────
+export interface KnowledgeMatch {
   id: string
   title: string
   outcome: string
   similarity: number
 }
 
-export interface HistoricalCaseOutput {
-  matches: HistoricalMatch[]
+export interface KnowledgeRetrievalOutput {
+  matches: KnowledgeMatch[]
 }
 
-export const historicalCaseAgentScript: AgentScript = {
-  agentId: 'historical-case-assistant',
-  agentName: 'Historical Case Assistant',
+export const knowledgeRetrievalAssistantScript: AgentScript = {
+  agentId: 'knowledge-retrieval-assistant',
+  agentName: 'Knowledge Retrieval Assistant',
   activityType: 'Agentic support',
   cognition: ['Perceive'],
   steps: [
@@ -34,7 +34,7 @@ export const historicalCaseAgentScript: AgentScript = {
 
 The strongest match is the REMIT-compliant bilateral power swap with ČEZ a.s. (Approved with conditions) — same ACER pre-trade notification pattern and EMIR addendum requirement. The Mytilinaios 10-year PPA and the Greek–North Macedonia capacity allocation provide the RAAEY prior-notification structure and the BoD-pack checklist. The CEO S.A. counterparty risk framework already confirms a EUR 40M exposure limit and Fitch BB+ appetite for this exact counterparty.
 
-These precedents are passed to the Recommendation Co-Pilot as drafting context. Open any to review the resolution wording and conditions precedent.`,
+These precedents are passed to the Recommendation Assistant as drafting context. Open any to review the resolution wording and conditions precedent.`,
   structuredOutput: {
     matches: [
       { id: 'pb-1', title: 'REMIT-compliant bilateral power swap with ČEZ a.s.', outcome: 'Approved with conditions', similarity: 0.94 },
@@ -42,7 +42,7 @@ These precedents are passed to the Recommendation Co-Pilot as drafting context. 
       { id: 'pb-5', title: 'Power Purchase Agreement with Mytilinaios S.A.', outcome: 'Approved with conditions', similarity: 0.83 },
       { id: 'pb-6', title: 'Greek–North Macedonia cross-border capacity allocation', outcome: 'Approved', similarity: 0.79 },
     ],
-  } satisfies HistoricalCaseOutput,
+  } satisfies KnowledgeRetrievalOutput,
   sources: [
     { id: 'pb-1', relevance: 'Closest precedent — bilateral cross-border swap, ACER/EMIR condition pattern' },
     { id: 'pb-8', relevance: 'Same counterparty (CEO S.A.) — exposure limit and Fitch BB+ appetite confirmed' },
@@ -85,7 +85,7 @@ Option B — Approve with delegated authority: as Option A, but delegate executi
 
 Option C — Approve in principle, ratify later: authorise negotiation and bring the final terms back for ratification. Lowest risk, but loses first-mover advantage ahead of HEnEx–HUPX coupling.
 
-Option A is recommended. On completion, its full wording is inserted into the draft-resolution section (section 10), which the Recommendation Co-Pilot left as a structural placeholder.`,
+Option A is recommended. On completion, its full wording is inserted into the draft-resolution section (section 10), which the Recommendation Assistant left as a structural placeholder.`,
   structuredOutput: {
     options: [
       { id: 'opt-a', label: 'Conditional approval', summary: 'Approve subject to ACER / RAAEY / CSA conditions precedent.', recommended: true },

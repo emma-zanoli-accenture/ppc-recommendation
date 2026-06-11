@@ -18,14 +18,14 @@ export interface DemoStep {
 export const DEMO_STEPS: DemoStep[] = [
   {
     persona: 'bu',
-    title: 'Step 1 — Identify the need (Historical Case Assistant)',
-    hint: 'Click "+ New Recommendation". On the form, click "Use example" to pre-fill the cross-border energy trading scenario. The Historical Case Assistant retrieves similar past recommendations as precedent. Then click "Create & Draft".',
+    title: 'Step 1 — Identify the need (Knowledge Retrieval Assistant)',
+    hint: 'Click "+ New Recommendation". On the form, click "Use example" to pre-fill the cross-border energy trading scenario. The Knowledge Retrieval Assistant retrieves similar past recommendations as precedent. Then click "Create & Draft".',
     switchHint: 'Next click: "Create & Draft"',
   },
   {
     persona: 'bu',
-    title: 'Step 2 — Draft (Recommendation Co-Pilot + Resolution Assistant)',
-    hint: 'Run the Recommendation Co-Pilot — it scaffolds the 11-section εισήγηση and regulatory refs (REMIT, EMIR, ACER, RAAEY), but leaves section 10 (the resolution) as a blank placeholder. Then run the Resolution Assistant — it proposes the resolution options and writes the recommended wording into section 10. Then run the Evidence Collection Assistant — it searches the document repository, ranks matches, and flags missing evidence; click "Attach all recommended" to bundle the supporting documents into the recommendation (they appear under Related Documents / Attachments and are viewable in preview). Open "Under the Hood" to show the orchestration + P/R/A cognitive layer. Then click "Send for Review".',
+    title: 'Step 2 — Draft (Recommendation Assistant + Resolution Assistant)',
+    hint: 'Run the Recommendation Assistant — it scaffolds the 11-section εισήγηση and regulatory refs (REMIT, EMIR, ACER, RAAEY), but leaves section 10 (the resolution) as a blank placeholder. Then run the Resolution Assistant — it proposes the resolution options and writes the recommended wording into section 10. Then run the Evidence Collection Assistant — it searches the document repository, ranks matches, and flags missing evidence; click "Attach all recommended" to bundle the supporting documents into the recommendation (they appear under Related Documents / Attachments and are viewable in preview). Open "Under the Hood" to show the orchestration + P/R/A cognitive layer. Then click "Send for Review".',
     switchHint: 'Next click: "Send for Review"',
   },
   {

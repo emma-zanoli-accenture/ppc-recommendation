@@ -21,7 +21,7 @@ export interface DraftingOutput {
 // s1–s5 and s9–s11 are pre-filled from the business need and PPC template.
 // s6, s7, s8 are stubs awaiting assisted-drafting input.
 
-// The operative resolution is NOT drafted by the Recommendation Co-Pilot. The Co-Pilot only
+// The operative resolution is NOT drafted by the Recommendation Assistant. The assistant only
 // scaffolds the structural placeholder (RESOLUTION_STUB) in section 10; the Resolution Assistant
 // (step 3) generates and inserts the full DRAFT_RESOLUTION. Exported for the Resolution Assistant.
 export const DRAFT_RESOLUTION = `Subject: Approval of Bilateral Energy Trading Framework Agreement — PPC S.A. / Complexul Energetic Oltenia S.A. (CEO S.A.)
@@ -183,8 +183,8 @@ const gaps: DraftSuggestion[] = [
 // ─── Agent script ─────────────────────────────────────────────────────────────
 
 export const draftingAgentScript: AgentScript = {
-  agentId: 'recommendation-copilot',
-  agentName: 'Recommendation Co-Pilot',
+  agentId: 'recommendation-assistant',
+  agentName: 'Recommendation Assistant',
   activityType: 'Reinvented with AI',
   cognition: ['Perceive', 'Reason', 'Act'],
   steps: [

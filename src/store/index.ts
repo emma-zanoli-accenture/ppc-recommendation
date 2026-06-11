@@ -214,7 +214,7 @@ export const useRecoStore = create<RecoStore>((set, get) => {
         }),
         {
           timestamp: now(),
-          actor: 'Recommendation Co-Pilot',
+          actor: 'Recommendation Assistant',
           role: 'AI',
           action: 'Applied drafting output',
           detail: `${output.contentSections.length} sections, draft resolution generated`,

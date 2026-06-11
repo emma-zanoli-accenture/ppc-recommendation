@@ -61,8 +61,8 @@ Three swimlanes → three personas (see Personas above):
 Recommendation Owners → P1 · Reviewing Functions/Chairman → P2 · BoD Secretary & Board → P3.
 
 **Phase 1 — Request initiation & drafting (P1)**
-- 1 Identify business needs → **Historical Case Assistant** (retrieve similar past recos, research precedents)
-- 2 Assisted draft recommendation → **Recommendation Co-Pilot** (initial draft, guideline alignment, missing-info & improvement suggestions)
+- 1 Identify business needs → **Knowledge Retrieval Assistant** (deck: "Historical Case Assistant") — retrieve similar past recos, research precedents
+- 2 Assisted draft recommendation → **Recommendation Assistant** (deck: "Recommendation Co-Pilot"; renamed to avoid clashing with "Recopilot") — initial draft, guideline alignment, missing-info & improvement suggestions
 - 3 Assisted draft resolutions → **Resolution Assistant** (alternative resolution options, similar past resolutions, impacts/dependencies)
 - 4 Collect supporting documents → **Evidence Collection Assistant** (auto-retrieve docs, identify applicable policies/regs, flag missing evidence)
 
@@ -84,8 +84,8 @@ them via the shared **AgentPanel**. Status of each vs the current code:
 
 | Assistant (official name) | Step | Status in code |
 |---|---|---|
-| **Historical Case Assistant** | 1 | KEEP — surface existing Knowledge Base + precedent grounding as a named step-1 moment |
-| **Recommendation Co-Pilot** | 2 | RENAME of the current *Drafting Agent* (recommendation body only) |
+| **Knowledge Retrieval Assistant** | 1 | KEEP — surface existing Knowledge Base + precedent grounding as a named step-1 moment (deck name: "Historical Case Assistant") |
+| **Recommendation Assistant** | 2 | RENAME of the current *Drafting Agent* (recommendation body only). Deck calls it "Recommendation Co-Pilot" — renamed to avoid overlap with the platform brand "Recopilot" |
 | **Resolution Assistant** | 3 | NEW — split the draft-resolution out of drafting; offer alternative options |
 | **Evidence Collection Assistant** | 4 | NEW |
 | **Review Planning Assistant** | 5 | NEW |
@@ -96,11 +96,11 @@ them via the shared **AgentPanel**. Status of each vs the current code:
 | **Governance Workflow Tracking** (Phase-3 portion) | 11–14 | KEEP/NAME — existing Secretariat pipeline + BoD pack/PDF (Readiness Agent folds in here) |
 | Clarification Co-Pilot | Phase 4 | OUT OF SCOPE — deferred |
 
-**Recopilot vs "Recommendation Co-Pilot":** the deck uses both. **Recopilot** stays the platform /
-orchestrator brand (the brand chip in Under-the-Hood). **Recommendation Co-Pilot** is the step-2
-drafting specialist, named verbatim from the deck. Disambiguate visually (Recopilot = brand lockup;
-Recommendation Co-Pilot = one AgentBadge specialist); never abbreviate either; subtitle it
-"drafting specialist" on first appearance.
+**Recopilot vs the step-2 drafting specialist:** the deck names the step-2 specialist
+"Recommendation Co-Pilot", which overlaps confusingly with the platform/orchestrator brand
+**Recopilot**. We therefore name it **Recommendation Assistant** in the demo. **Recopilot** stays the
+orchestrator brand (the brand chip in Under-the-Hood); **Recommendation Assistant** is one of its
+AgentBadge specialists, subtitled "drafting specialist" on first appearance.
 
 Every AI moment uses the shared **AgentPanel**: agent identity + thinking animation + streamed
 reasoning steps (as chips) + result. The **"Under the Hood"** toggle exposes the orchestration
@@ -129,7 +129,7 @@ This is **not in the official map** — keep it a *de-emphasized en-passant* opt
 Core references: **REMIT** (wholesale market integrity/transparency, ACER reporting),
 **EMIR** (derivatives reporting/clearing), **ACER** oversight, **RAAEY** (Greek regulator,
 successor to RAE) notification. Secondary flags: **MiFID II** classification, **HEnEx** /
-market coupling. Use these in the Recommendation Co-Pilot and Legal Review Agent output.
+market coupling. Use these in the Recommendation Assistant and Legal Review Agent output.
 
 ## Golden path (the hero scenario)
 A single hardcoded recommendation: **"New cross-border energy trading agreement"** (Procurement),
@@ -159,13 +159,13 @@ board meeting date that drives deadlines.
 - No 4th persona. The Chairman is a mandatory reviewer in Persona 2, not a persona. Keep the
   direct-to-Chairman bypass de-emphasized.
 - Don't break golden-path determinism. Don't introduce real latency or anything that can fail live.
-- No code names — assistants use the official deck names (Recommendation Co-Pilot, Resolution
+- No code names — assistants use the official deck names (Recommendation Assistant, Resolution
   Assistant, etc.); Recopilot stays the orchestrator brand.
 - Don't build Phase 4 (steps 15–20 / Clarification Co-Pilot) — out of scope.
 
 ## Branding
 Platform name: **Recopilot** — "your agentic copilot for board recommendations." Recopilot is the
-orchestrator brand; the official assistants above (Historical Case Assistant, Recommendation Co-Pilot,
+orchestrator brand; the official assistants above (Knowledge Retrieval Assistant, Recommendation Assistant,
 Resolution Assistant, etc.) are its specialists.
 Client: **PPC** (PPC Group). Keep the client name in a single configurable constant for easy reuse.
 Lockup: **"Recopilot · for PPC Group"**. Aim for a polished, modern legal-tech / control-tower
