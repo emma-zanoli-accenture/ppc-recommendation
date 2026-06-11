@@ -34,6 +34,7 @@ function blankReviews() {
     legal: { status: 'Pending' as const, comments: [] },
     finance: { status: 'Pending' as const, comments: [] },
     compliance: { status: 'Pending' as const, comments: [] },
+    chairman: { status: 'Pending' as const, comments: [] },
   }
 }
 
@@ -191,7 +192,7 @@ export const useRecoStore = create<RecoStore>((set, get) => {
         }),
         {
           timestamp: now(),
-          actor: 'Drafting Agent',
+          actor: 'Recommendation Co-Pilot',
           role: 'AI',
           action: 'Applied drafting output',
           detail: `${output.contentSections.length} sections, draft resolution generated`,
@@ -224,7 +225,7 @@ export const useRecoStore = create<RecoStore>((set, get) => {
         id,
         (r) => ({
           ...r,
-          status: 'Submitted to Chairman',
+          status: 'Submitted to Secretariat',
           directToChairman: { reason, sentAt: now() },
         }),
         {
@@ -362,12 +363,12 @@ export const useRecoStore = create<RecoStore>((set, get) => {
     submitToSecretariat: (id) => {
       update(
         id,
-        (r) => ({ ...r, status: 'Submitted to Chairman' }),
+        (r) => ({ ...r, status: 'Submitted to Secretariat' }),
         {
           timestamp: now(),
           actor: get().getById(id)?.owner ?? 'Unknown',
           role: get().getById(id)?.businessUnit ?? '',
-          action: 'Submitted to Chairman',
+          action: 'Submitted to Secretariat',
         }
       )
     },

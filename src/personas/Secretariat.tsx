@@ -43,15 +43,15 @@ const PAGE = {
 }
 
 const PIPELINE_STATUSES: RecommendationStatus[] = [
-  'Submitted to Chairman',
+  'Submitted to Secretariat',
   'Ready for BoD',
   'Submitted to BoD',
 ]
 
-// Statuses visible in the Chairman's dashboard (used to scope the Stats panel)
-const CHAIRMAN_SCOPE: RecommendationStatus[] = [
+// Statuses visible in the Secretariat's control-tower dashboard (used to scope the Stats panel)
+const SECRETARIAT_SCOPE: RecommendationStatus[] = [
   'All Reviews Completed',
-  'Submitted to Chairman',
+  'Submitted to Secretariat',
   'Ready for BoD',
   'Submitted to BoD',
 ]
@@ -60,6 +60,7 @@ const FN_LABELS: Record<ReviewFunction, string> = {
   legal: 'Legal',
   finance: 'Finance',
   compliance: 'Compliance',
+  chairman: 'Chairman',
 }
 
 // ─── PDF generator ────────────────────────────────────────────────────────────
@@ -575,6 +576,7 @@ function CompletenessChecklist({ reco }: { reco: Recommendation }) {
           { label: 'Legal review approved', pass: reco.reviews.legal.status.startsWith('Approved') },
           { label: 'Finance review approved', pass: reco.reviews.finance.status.startsWith('Approved') },
           { label: 'Compliance review approved', pass: reco.reviews.compliance.status.startsWith('Approved') },
+          { label: 'Chairman sign-off (mandatory)', pass: reco.reviews.chairman.status.startsWith('Approved') },
         ]
     ),
     { label: 'Regulatory references attached', pass: reco.regulatoryRefs.length > 0 },
@@ -611,11 +613,11 @@ function CompletenessChecklist({ reco }: { reco: Recommendation }) {
 
 const STATUS_ORDER: RecommendationStatus[] = [
   'Draft', 'Under Review', 'Returned for Update', 'All Reviews Completed',
-  'Submitted to Chairman', 'Ready for BoD', 'Submitted to BoD',
+  'Submitted to Secretariat', 'Ready for BoD', 'Submitted to BoD',
 ]
 
 function StatsPanel({ recommendations }: { recommendations: Recommendation[] }) {
-  // recommendations is pre-filtered to CHAIRMAN_SCOPE — only items visible in this dashboard
+  // recommendations is pre-filtered to SECRETARIAT_SCOPE — only items visible in this dashboard
   const total = recommendations.length
 
   // Pipeline funnel (only Chairman stages)
@@ -959,8 +961,8 @@ function SecDashboard({
     },
     {
       label: 'In pipeline',
-      status: 'Submitted to Chairman',
-      items: byBU(recommendations.filter((r) => r.status === 'Submitted to Chairman')),
+      status: 'Submitted to Secretariat',
+      items: byBU(recommendations.filter((r) => r.status === 'Submitted to Secretariat')),
       accent: 'text-violet-700',
     },
     {
@@ -988,8 +990,8 @@ function SecDashboard({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">Chairman</h1>
-          <p className="text-slate-500 text-sm mt-1">Control tower · BoD submission pipeline</p>
+          <h1 className="text-2xl font-semibold text-slate-800">Corporate Secretariat</h1>
+          <p className="text-slate-500 text-sm mt-1">Control tower · Governance Workflow Tracking · BoD submission pipeline</p>
         </div>
         <button
           onClick={() => setStatsOpen(true)}
@@ -1111,7 +1113,7 @@ function SecDashboard({
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                <StatsPanel recommendations={recommendations.filter((r) => CHAIRMAN_SCOPE.includes(r.status))} />
+                <StatsPanel recommendations={recommendations.filter((r) => SECRETARIAT_SCOPE.includes(r.status))} />
               </div>
             </motion.div>
           </>
@@ -1408,9 +1410,14 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
 
         {/* Right: agent + actions */}
         <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
-            Readiness Agent
-          </h2>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
+              Readiness Agent
+            </h2>
+            <p className="text-[11px] text-slate-400 mt-0.5 normal-case">
+              Governance Workflow Tracking · package preparation
+            </p>
+          </div>
 
           <AgentPanel
             key={recoId}
@@ -1418,7 +1425,7 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
             inputs={{
               recommendation: reco.title,
               sections: String(reco.contentSections.length),
-              reviews: 'Legal, Finance, Compliance',
+              reviews: 'Legal, Finance, Compliance, Chairman',
               deadline: String(days) + 'd',
             }}
             onComplete={handleAgentComplete}
@@ -1467,10 +1474,10 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
             )}
           </div>
 
-          {/* Review approvals summary */}
+          {/* Review approvals summary — Approval Tracking Assistant */}
           <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-2">
             <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
-              Review Approvals
+              Review Approvals · Approval Tracking Assistant
             </p>
             {reco.directToChairman?.chairmanApproved ? (
               <div className="flex items-center gap-2 py-1">
@@ -1480,7 +1487,7 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
                 </span>
               </div>
             ) : (
-              (['legal', 'finance', 'compliance'] as ReviewFunction[]).map((fn) => {
+              (['legal', 'finance', 'compliance', 'chairman'] as ReviewFunction[]).map((fn) => {
                 const review = reco.reviews[fn]
                 const ok = review.status === 'Approved'
                 return (

@@ -9,7 +9,7 @@ const SEC_LEGAL_COUNSEL = 'V. Oikonomou'
 
 const BEYOND_REVIEW = new Set<RecommendationStatus>([
   'All Reviews Completed',
-  'Submitted to Chairman',
+  'Submitted to Secretariat',
   'Ready for BoD',
   'Submitted to BoD',
 ])
@@ -53,7 +53,7 @@ export const SIG_TIERS: SigTier[] = [
         getTs: (r) =>
           auditTs(r, 'Legal feedback integrated — version accepted') ??
           auditTs(r, 'Sent directly to Chairman') ??
-          auditTs(r, 'Submitted to Chairman'),
+          auditTs(r, 'Submitted to Secretariat'),
       },
     ],
   },
@@ -96,6 +96,25 @@ export const SIG_TIERS: SigTier[] = [
           !!r.directToChairman?.chairmanApproved && !r.reviews.compliance.status.startsWith('Approved'),
         getTs: (r) =>
           r.reviews.compliance.reviewedAt ?? auditTs(r, 'Compliance review approved'),
+      },
+    ],
+  },
+  {
+    label: 'Chairman',
+    note: 'Mandatory sign-off',
+    slots: [
+      {
+        id: 'chairman',
+        role: 'Chairman of the Board',
+        getName: (r) => r.reviews.chairman.reviewer ?? (r.directToChairman?.chairmanApproved ? 'P. Georgiou' : null),
+        signed: (r) =>
+          r.reviews.chairman.status.startsWith('Approved') || !!r.directToChairman?.chairmanApproved,
+        bypassed: () => false,
+        chairmanBypassed: () => false,
+        getTs: (r) =>
+          r.reviews.chairman.reviewedAt ??
+          auditTs(r, 'Chairman review approved') ??
+          r.directToChairman?.approvedAt,
       },
     ],
   },

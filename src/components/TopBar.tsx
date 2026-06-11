@@ -1,4 +1,4 @@
-import { Users, Scale, Crown, BookOpen, RotateCcw, Database } from 'lucide-react'
+import { Users, Scale, Landmark, BookOpen, RotateCcw, Database } from 'lucide-react'
 import { useUIStore, type Persona } from '@/store/uiStore'
 import { useRecoStore } from '@/store'
 import { APP_NAME, PPC_CLIENT } from '@/lib/constants'
@@ -6,7 +6,7 @@ import { APP_NAME, PPC_CLIENT } from '@/lib/constants'
 const PERSONAS: { id: Persona; label: string; sublabel: string; icon: React.ElementType }[] = [
   { id: 'bu', label: 'Rec. Owner', sublabel: '', icon: Users },
   { id: 'review', label: 'Reviewers', sublabel: '', icon: Scale },
-  { id: 'secretariat', label: 'Chairman', sublabel: '', icon: Crown },
+  { id: 'secretariat', label: 'Secretariat', sublabel: '', icon: Landmark },
 ]
 
 export default function TopBar() {

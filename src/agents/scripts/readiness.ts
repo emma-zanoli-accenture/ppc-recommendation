@@ -11,6 +11,8 @@ export interface ReadinessOutput {
 export const readinessAgentScript: AgentScript = {
   agentId: 'readiness-agent',
   agentName: 'Readiness Agent',
+  activityType: 'Agentic support',
+  cognition: ['Perceive', 'Reason', 'Act'],
   steps: [
     'Auditing completeness — verifying all 11 required content sections',
     'Validating draft resolution — mandatory field, structure and validity check',

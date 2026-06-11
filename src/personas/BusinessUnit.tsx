@@ -25,7 +25,14 @@ import RecoCard from '@/components/RecoCard'
 import SignatureBlock from '@/components/SignatureBlock'
 import StatusBadge from '@/components/StatusBadge'
 import Timeline from '@/components/Timeline'
-import { draftingAgentScript } from '@/agents/scripts'
+import {
+  draftingAgentScript,
+  historicalCaseAgentScript,
+  resolutionAssistantScript,
+  evidenceCollectionAgentScript,
+  reviewPlanningAgentScript,
+  reviewWorkflowAgentScript,
+} from '@/agents/scripts'
 import { statusColors } from '@/lib/statusColors'
 import type { ReviewFunction, Recommendation, RecommendationStatus } from '@/lib/types'
 import type { DraftingOutput, DraftSuggestion } from '@/agents/scripts/drafting'
@@ -45,16 +52,18 @@ const EXAMPLE_TITLE = 'New cross-border energy trading agreement'
 const EXAMPLE_BUSINESS_NEED =
   'PPC S.A. seeks to capitalise on its cross-border transmission capacity between Greece and Romania (ENTSO-E NTC: 400 MW) by entering into a bilateral energy trading framework with Complexul Energetic Oltenia S.A. (CEO S.A.) covering up to 500 GWh/year of physical electricity delivery. The arrangement will enable PPC to optimise generation dispatch, balance seasonal load curves, and establish a commercial foothold in the Romanian forward market ahead of the HEnEx–HUPX market coupling milestone scheduled for 2027. This recommendation seeks BoD approval for the framework agreement and associated regulatory compliance steps.'
 
-const FN_INFO: { fn: ReviewFunction; label: string; description: string }[] = [
+const FN_INFO: { fn: ReviewFunction; label: string; description: string; mandatory?: boolean }[] = [
   { fn: 'legal', label: 'Legal', description: 'Regulatory review — REMIT, EMIR, RAAEY, MiFID II' },
   { fn: 'finance', label: 'Finance', description: 'Financial impact, budget coverage, FX risk' },
   { fn: 'compliance', label: 'Compliance', description: 'Internal policy and governance alignment' },
+  { fn: 'chairman', label: 'Chairman', description: 'Mandatory governance sign-off — cross-border arrangements > EUR 10M', mandatory: true },
 ]
 
 const FN_LABELS: Record<ReviewFunction, string> = {
   legal: 'Legal',
   finance: 'Finance',
   compliance: 'Compliance',
+  chairman: 'Chairman',
 }
 
 const REVIEW_STATUS_CLS: Record<string, string> = {
@@ -253,6 +262,7 @@ function BUCreate({ onBack, onCreate }: { onBack: () => void; onCreate: (id: str
   const [title, setTitle] = useState('')
   const [businessNeed, setBusinessNeed] = useState('')
   const createRecommendation = useRecoStore((s) => s.createRecommendation)
+  const setOpenPrecedentId = useUIStore((s) => s.setOpenPrecedentId)
 
   const useExample = () => {
     setTitle(EXAMPLE_TITLE)
@@ -330,6 +340,24 @@ function BUCreate({ onBack, onCreate }: { onBack: () => void; onCreate: (id: str
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
+      </div>
+
+      {/* Step 1 · Historical Case Assistant — precedent retrieval */}
+      <div className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Historical Case Assistant</h2>
+          <p className="text-[11px] text-slate-400 mt-0.5 normal-case">
+            retrieves similar past recommendations as precedent · orchestrated by Recopilot
+          </p>
+        </div>
+        <AgentPanel
+          script={historicalCaseAgentScript}
+          inputs={{
+            business_need: (businessNeed || EXAMPLE_BUSINESS_NEED).slice(0, 80) + '…',
+            scope: 'Cross-border energy trading · Greece–Romania',
+          }}
+          onSourceClick={setOpenPrecedentId}
+        />
       </div>
     </div>
   )
@@ -558,7 +586,7 @@ function BUDraftView({
           {!hasSections ? (
             <div className="bg-surface border border-dashed border-border-strong rounded-xl p-10 text-center space-y-2">
               <p className="text-slate-500 text-sm font-medium">
-                Run the Drafting Agent to scaffold the recommendation document.
+                Run the Recommendation Co-Pilot to scaffold the recommendation document.
               </p>
               <p className="text-xs text-slate-400 italic">
                 11 sections (PPC εισήγηση format) · regulatory framework · draft resolution
@@ -742,7 +770,10 @@ function BUDraftView({
 
         {/* ── Right column: Agent + Assisted drafting ──────────────── */}
         <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Drafting Agent</h2>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Recommendation Co-Pilot</h2>
+            <p className="text-[11px] text-slate-400 mt-0.5 normal-case">drafting specialist · orchestrated by Recopilot</p>
+          </div>
           <AgentPanel
             script={draftingAgentScript}
             inputs={{
@@ -837,6 +868,30 @@ function BUDraftView({
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Step 3 · Resolution Assistant + Step 4 · Evidence Collection Assistant */}
+          <AnimatePresence>
+            {hasSections && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25 }}
+                className="space-y-4"
+              >
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Resolution Assistant</h2>
+                  <p className="text-[11px] text-slate-400 mt-0.5 normal-case">draft-resolution options · section 10</p>
+                </div>
+                <AgentPanel script={resolutionAssistantScript} onSourceClick={setOpenPrecedentId} />
+
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Evidence Collection Assistant</h2>
+                  <p className="text-[11px] text-slate-400 mt-0.5 normal-case">supporting documents & applicable policies</p>
+                </div>
+                <AgentPanel script={evidenceCollectionAgentScript} onSourceClick={setOpenPrecedentId} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -901,20 +956,24 @@ function BUSendView({
   const sendDirectToChairman = useRecoStore((s) => s.sendDirectToChairman)
 
   const [selected, setSelected] = useState<Set<ReviewFunction>>(
-    new Set<ReviewFunction>(['legal', 'finance', 'compliance'])
+    new Set<ReviewFunction>(['legal', 'finance', 'compliance', 'chairman'])
   )
   const [directMode, setDirectMode] = useState(false)
   const [reason, setReason] = useState('')
 
   if (!reco) return null
 
-  const toggle = (fn: ReviewFunction) =>
+  const isMandatory = (fn: ReviewFunction) => FN_INFO.find((f) => f.fn === fn)?.mandatory ?? false
+
+  const toggle = (fn: ReviewFunction) => {
+    if (isMandatory(fn)) return // Chairman cannot be deselected
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(fn)) next.delete(fn)
       else next.add(fn)
       return next
     })
+  }
 
   const canSend = directMode ? reason.trim().length > 0 : selected.size > 0
 
@@ -942,15 +1001,43 @@ function BUSendView({
         <p className="text-slate-500 text-sm mt-1 line-clamp-1">{reco.title}</p>
       </div>
 
+      {!directMode && (
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Review Planning</h2>
+            <p className="text-[11px] text-slate-400 mt-0.5 normal-case">
+              approval timing & reviewer routing · orchestrated by Recopilot
+            </p>
+          </div>
+          <AgentPanel
+            script={reviewPlanningAgentScript}
+            inputs={{
+              board_meeting: reco.boardMeetingDate,
+              bod_deadline: reco.bodDeadline,
+              notional: '> EUR 10M (cross-border, multi-year)',
+            }}
+          />
+          <AgentPanel
+            script={reviewWorkflowAgentScript}
+            inputs={{
+              recommendation_type: 'Cross-border bilateral energy trading',
+              governance_rule: 'Group Authorisation Matrix · BoD threshold',
+            }}
+          />
+        </div>
+      )}
+
       <div className="bg-surface border border-border-subtle rounded-xl p-5 space-y-4">
         {!directMode ? (
           <>
-            <p className="text-sm font-medium text-slate-700">Select review functions</p>
+            <p className="text-sm font-medium text-slate-700">Select reviewers</p>
             <div className="space-y-2">
-              {FN_INFO.map(({ fn, label, description }) => (
+              {FN_INFO.map(({ fn, label, description, mandatory }) => (
                 <label
                   key={fn}
-                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                  className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
+                    mandatory ? 'cursor-default' : 'cursor-pointer'
+                  } ${
                     selected.has(fn)
                       ? 'border-brand/50 bg-brand-subtle'
                       : 'border-border-subtle hover:border-border-strong'
@@ -960,10 +1047,18 @@ function BUSendView({
                     type="checkbox"
                     checked={selected.has(fn)}
                     onChange={() => toggle(fn)}
-                    className="mt-0.5 accent-brand"
+                    disabled={mandatory}
+                    className="mt-0.5 accent-brand disabled:opacity-70"
                   />
                   <div>
-                    <p className="text-sm font-medium text-slate-700">{label}</p>
+                    <p className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                      {label}
+                      {mandatory && (
+                        <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-brand text-white leading-none">
+                          Mandatory
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-slate-500">{description}</p>
                   </div>
                 </label>
@@ -1007,7 +1102,7 @@ function BUSendView({
           <Send className="w-4 h-4" />
           {directMode
             ? 'Send to Chairman'
-            : `Send to ${selected.size} function${selected.size !== 1 ? 's' : ''}`}
+            : `Send to ${selected.size} reviewer${selected.size !== 1 ? 's' : ''}`}
         </button>
       </div>
     </div>
@@ -1034,11 +1129,11 @@ function BUFeedbackView({
 
   const isReturned = reco.status === 'Returned for Update'
   const allDone = reco.status === 'All Reviews Completed'
-  const isSubmitted = ['Submitted to Chairman', 'Ready for BoD', 'Submitted to BoD'].includes(
+  const isSubmitted = ['Submitted to Secretariat', 'Ready for BoD', 'Submitted to BoD'].includes(
     reco.status
   )
 
-  const activeReviews = (['legal', 'finance', 'compliance'] as ReviewFunction[]).filter(
+  const activeReviews = (['legal', 'finance', 'compliance', 'chairman'] as ReviewFunction[]).filter(
     (fn) => reco.reviews[fn].status !== 'Pending'
   )
 
@@ -1093,7 +1188,7 @@ function BUFeedbackView({
             </div>
           ) : (
             <div className="space-y-3">
-              {(['legal', 'finance', 'compliance'] as ReviewFunction[]).map((fn) => {
+              {(['legal', 'finance', 'compliance', 'chairman'] as ReviewFunction[]).map((fn) => {
                 const review = reco.reviews[fn]
                 if (review.status === 'Pending') return null
                 const cls = REVIEW_STATUS_CLS[review.status] ?? 'text-slate-500'
@@ -1153,7 +1248,7 @@ function BUFeedbackView({
                   }}
                   className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dim transition-colors inline-flex items-center gap-1.5"
                 >
-                  Submit to Chairman
+                  Submit to Secretariat
                   <ChevronRight className="w-4 h-4" />
                 </button>
               )}
@@ -1165,7 +1260,7 @@ function BUFeedbackView({
               <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-emerald-700">
-                  Submitted to Chairman
+                  Submitted to Secretariat
                 </p>
                 <p className="text-xs text-emerald-600 mt-0.5">
                   The Readiness Agent will assess completeness and prepare the BoD pack.
@@ -1726,7 +1821,10 @@ function BUUpdateView({
 
         {/* ── Right column: Legal Comments ─────────────────────────── */}
         <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Legal Feedback</h2>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Legal Feedback</h2>
+            <p className="text-[11px] text-slate-400 mt-0.5 normal-case">consolidated by the Feedback Co-Pilot · orchestrated by Recopilot</p>
+          </div>
 
           <div className="border border-border-subtle rounded-xl overflow-hidden bg-surface">
             <div className="px-4 py-3 bg-surface-raised border-b border-border-subtle flex items-center gap-2">

@@ -1,17 +1,17 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ChevronLeft, ChevronRight, Users, Scale, Crown } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Users, Scale, Landmark } from 'lucide-react'
 import { useUIStore, DEMO_STEPS, type Persona } from '@/store/uiStore'
 
 const PERSONA_ICONS: Record<Persona, React.ElementType> = {
   bu: Users,
   review: Scale,
-  secretariat: Crown,
+  secretariat: Landmark,
 }
 
 const PERSONA_LABELS: Record<Persona, string> = {
   bu: 'Recommendation Owner',
   review: 'Reviewers',
-  secretariat: 'Chairman',
+  secretariat: 'Corporate Secretariat',
 }
 
 export default function DemoGuide() {

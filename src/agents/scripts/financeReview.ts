@@ -10,6 +10,8 @@ export interface FinanceReviewOutput {
 export const financeReviewAgentScript: AgentScript = {
   agentId: 'finance-review-agent',
   agentName: 'Finance Review Agent',
+  activityType: 'Agentic support',
+  cognition: ['Perceive', 'Reason'],
   steps: [
     'Retrieving FY2026 budget — Trading & Origination division',
     'Reviewing section 7 (Budget/Expense) — cost centre, account, CAPEX/OPEX classification',

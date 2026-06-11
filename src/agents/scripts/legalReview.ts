@@ -9,6 +9,8 @@ export interface LegalReviewOutput {
 export const legalReviewAgentScript: AgentScript = {
   agentId: 'legal-review-agent',
   agentName: 'Legal Review Agent',
+  activityType: 'Agentic support',
+  cognition: ['Perceive', 'Reason'],
   steps: [
     'Reviewing sections 2 (Necessity) and 3 (Object) for REMIT/EMIR compliance',
     'Cross-referencing ACER Market Monitoring Report 2025 — Art. 4 pre-trade notification',

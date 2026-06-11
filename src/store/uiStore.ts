@@ -4,8 +4,8 @@ export type Persona = 'bu' | 'review' | 'secretariat'
 
 export const PERSONA_LABELS: Record<Persona, string> = {
   bu: 'Business Unit',
-  review: 'Legal / Finance / Compliance',
-  secretariat: 'Chairman',
+  review: 'Legal / Finance / Compliance / Chairman',
+  secretariat: 'Corporate Secretariat',
 }
 
 export interface DemoStep {
@@ -18,44 +18,44 @@ export interface DemoStep {
 export const DEMO_STEPS: DemoStep[] = [
   {
     persona: 'bu',
-    title: 'Step 1 — Create the recommendation',
-    hint: 'Click "+ New Recommendation". On the form, click "Use example" to pre-fill the cross-border energy trading scenario — avoids live typing. Then click "Create & Draft".',
+    title: 'Step 1 — Identify the need (Historical Case Assistant)',
+    hint: 'Click "+ New Recommendation". On the form, click "Use example" to pre-fill the cross-border energy trading scenario. The Historical Case Assistant retrieves similar past recommendations as precedent. Then click "Create & Draft".',
     switchHint: 'Next click: "Create & Draft"',
   },
   {
     persona: 'bu',
-    title: 'Step 2 — Draft with the Drafting Agent',
-    hint: 'Click "Run Drafting Agent". Watch it scaffold 7 sections, regulatory refs (REMIT, EMIR, ACER, RAAEY), and the draft resolution. Open "Under the Hood" to show the IT audience the orchestration. Then click "Send for Review".',
+    title: 'Step 2 — Draft (Recommendation Co-Pilot + Resolution Assistant)',
+    hint: 'Run the Recommendation Co-Pilot — it scaffolds the 11-section εισήγηση, regulatory refs (REMIT, EMIR, ACER, RAAEY) and the draft resolution. The Resolution Assistant proposes the resolution options; the Evidence Collection Assistant lists supporting documents. Open "Under the Hood" to show the orchestration + P/R/A cognitive layer. Then click "Send for Review".',
     switchHint: 'Next click: "Send for Review"',
   },
   {
     persona: 'bu',
-    title: 'Step 3 — Send for review',
-    hint: 'All three functions are pre-selected. Click "Send to 3 functions". Status moves to "Under Review". Switch persona to watch the reviews.',
-    switchHint: '→ Switch to Legal / Finance / Compliance',
+    title: 'Step 3 — Plan & route review (Review Planning + Review Workflow)',
+    hint: 'The Review Planning Assistant suggests the approval timing; the Review Workflow Assistant maps reviewers. Legal, Finance, Compliance and the Chairman (mandatory) are pre-selected. Click "Send for review". Status moves to "Under Review". Switch persona to run the reviews.',
+    switchHint: '→ Switch to Legal / Finance / Compliance / Chairman',
   },
   {
     persona: 'review',
-    title: 'Step 4 — Specialist review',
-    hint: 'Click the cross-border trading item (marked "New"). Run the Legal Review Agent — it flags REMIT/EMIR criticalities. Click "Return for Update". Then switch to Finance and Compliance tabs and click "Approve" on each.',
+    title: 'Step 4 — Review & sign-off',
+    hint: 'Open the cross-border item (marked "New"). Run the Legal Review Agent — it flags REMIT/EMIR criticalities; click "Return for Update". Then on the Finance, Compliance and Chairman tabs, click "Approve" on each (Chairman sign-off is mandatory).',
     switchHint: '→ Switch back to Business Unit',
   },
   {
     persona: 'bu',
-    title: 'Step 5 — Review feedback & accept',
-    hint: 'Click the recommendation showing "Returned for Update". Click "Review Feedback". Apply each of the 3 Legal comments with the "Apply" button — each updates the corresponding section. Once all resolved, click "Verify & accept version". Once all reviews complete, click "Submit to Chairman".',
-    switchHint: '→ Switch to Chairman',
+    title: 'Step 5 — Consolidate feedback & accept (Feedback Co-Pilot)',
+    hint: 'Open the "Returned for Update" item, click "Review Feedback". The Feedback Co-Pilot consolidates the comments — apply each of the 3 Legal comments, then click "Verify & accept version". Once all reviews (incl. Chairman) are complete, click "Submit to Secretariat".',
+    switchHint: '→ Switch to Corporate Secretariat',
   },
   {
     persona: 'secretariat',
-    title: 'Step 6 — Readiness check',
-    hint: 'Find the cross-border trading item in "In pipeline". Click it, then click "Run Readiness Agent". The readiness score and completeness checklist populate. Note the BoD deadline countdown.',
+    title: 'Step 6 — Readiness check (Governance Workflow Tracking)',
+    hint: 'Find the cross-border item in "In pipeline". Open it, then run the Readiness Agent. The readiness score and completeness checklist populate. Note the BoD deadline countdown.',
     switchHint: 'Next click: "Generate BoD Pack"',
   },
   {
     persona: 'secretariat',
-    title: 'Step 7 — BoD pack & submit',
-    hint: 'Click "Generate BoD Pack". Then click "Download PDF" to show the formatted pack on screen. Optionally click "Share with Chairman" to show the touchpoint. Finally click "Submit to BoD" to complete the demo.',
+    title: 'Step 7 — Prepare, distribute & submit to BoD',
+    hint: 'Click "Generate BoD Pack", then "Download PDF" to show the formatted pack. Optionally "Share with Chairman" to show the touchpoint. Finally click "Submit to BoD" to complete the demo.',
     switchHint: 'Demo complete ✓',
   },
 ]
