@@ -1,6 +1,21 @@
 import { create } from 'zustand'
 import type { Recommendation, ReviewFunction, AuditEntry, Comment, ContentSection } from '@/lib/types'
 import { seedRecommendations, BOARD_MEETING_DATE, BOD_DEADLINE } from '@/data/seed'
+import { buildSection1Body } from '@/agents/scripts/drafting'
+import { DOCS_BY_ID } from '@/data/documentRepository'
+
+// Rewrites section 1's "Attachments" paragraph from the attached documents so the formal PPC
+// document text reflects what the Evidence Collection Assistant attached.
+function syncSection1Attachments(
+  sections: ContentSection[],
+  attachments: string[]
+): ContentSection[] {
+  if (!sections.some((s) => s.id === 's1')) return sections
+  const titles = attachments
+    .map((id) => DOCS_BY_ID.get(id)?.title)
+    .filter((t): t is string => Boolean(t))
+  return sections.map((s) => (s.id === 's1' ? { ...s, body: buildSection1Body(titles) } : s))
+}
 
 const STORAGE_KEY = 'recopilot-v1'
 
@@ -96,6 +111,12 @@ export interface RecoStore {
 
   generateBoDPack: (id: string, packItems: string[]) => void
 
+  // Evidence Collection Assistant — attach/detach supporting documents
+  attachDocuments: (id: string, docIds: string[]) => void
+  detachDocument: (id: string, docId: string) => void
+  // Action a flagged missing-evidence item (logs the request to the audit trail)
+  requestEvidence: (id: string, label: string) => void
+
   submitToBoD: (id: string) => void
 
   appendAuditLog: (id: string, entry: Omit<AuditEntry, 'id'>) => void
@@ -154,6 +175,7 @@ export const useRecoStore = create<RecoStore>((set, get) => {
         draftResolution: '',
         reviews: blankReviews(),
         readinessScore: 0,
+        attachments: [],
         auditLog: [
           {
             id: uid(),
@@ -393,6 +415,49 @@ export const useRecoStore = create<RecoStore>((set, get) => {
           role: 'AI',
           action: 'BoD pack assembled',
           detail: `${packItems.length} documents`,
+        }
+      )
+    },
+
+    attachDocuments: (id, docIds) => {
+      const existing = get().getById(id)?.attachments ?? []
+      const added = docIds.filter((d) => !existing.includes(d))
+      if (added.length === 0) return
+      update(
+        id,
+        (r) => {
+          const attachments = [...(r.attachments ?? []), ...added]
+          return { ...r, attachments, contentSections: syncSection1Attachments(r.contentSections, attachments) }
+        },
+        {
+          timestamp: now(),
+          actor: 'Evidence Collection Assistant',
+          role: 'AI',
+          action: added.length > 1 ? 'Attached supporting documents' : 'Attached supporting document',
+          detail: `${added.length} document${added.length > 1 ? 's' : ''} attached`,
+        }
+      )
+    },
+
+    detachDocument: (id, docId) => {
+      update(id, (r) => {
+        const attachments = (r.attachments ?? []).filter((d) => d !== docId)
+        return { ...r, attachments, contentSections: syncSection1Attachments(r.contentSections, attachments) }
+      })
+    },
+
+    requestEvidence: (id, label) => {
+      const existing = get().getById(id)?.evidenceRequests ?? []
+      if (existing.includes(label)) return
+      update(
+        id,
+        (r) => ({ ...r, evidenceRequests: [...(r.evidenceRequests ?? []), label] }),
+        {
+          timestamp: now(),
+          actor: get().getById(id)?.owner ?? 'Unknown',
+          role: get().getById(id)?.businessUnit ?? '',
+          action: 'Requested missing evidence',
+          detail: label,
         }
       )
     },

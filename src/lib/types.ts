@@ -71,6 +71,11 @@ export interface Recommendation {
   }
   readinessScore: number
   bodPackItems?: string[]
+  // Attached supporting documents (ids into the document repository) — collected by the
+  // Evidence Collection Assistant.
+  attachments?: string[]
+  // Missing-evidence items the owner has actioned ("requested") — by label.
+  evidenceRequests?: string[]
   directToChairman?: DirectToChairman
   auditLog: AuditEntry[]
 }

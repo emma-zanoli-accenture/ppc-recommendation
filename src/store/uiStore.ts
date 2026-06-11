@@ -25,7 +25,7 @@ export const DEMO_STEPS: DemoStep[] = [
   {
     persona: 'bu',
     title: 'Step 2 — Draft (Recommendation Co-Pilot + Resolution Assistant)',
-    hint: 'Run the Recommendation Co-Pilot — it scaffolds the 11-section εισήγηση and regulatory refs (REMIT, EMIR, ACER, RAAEY), but leaves section 10 (the resolution) as a blank placeholder. Then run the Resolution Assistant — it proposes the resolution options and writes the recommended wording into section 10. The Evidence Collection Assistant lists supporting documents. Open "Under the Hood" to show the orchestration + P/R/A cognitive layer. Then click "Send for Review".',
+    hint: 'Run the Recommendation Co-Pilot — it scaffolds the 11-section εισήγηση and regulatory refs (REMIT, EMIR, ACER, RAAEY), but leaves section 10 (the resolution) as a blank placeholder. Then run the Resolution Assistant — it proposes the resolution options and writes the recommended wording into section 10. Then run the Evidence Collection Assistant — it searches the document repository, ranks matches, and flags missing evidence; click "Attach all recommended" to bundle the supporting documents into the recommendation (they appear under Related Documents / Attachments and are viewable in preview). Open "Under the Hood" to show the orchestration + P/R/A cognitive layer. Then click "Send for Review".',
     switchHint: 'Next click: "Send for Review"',
   },
   {
@@ -77,6 +77,8 @@ interface UIStore {
   setKbOpen: (v: boolean) => void
   openPrecedentId: string | null
   setOpenPrecedentId: (id: string | null) => void
+  openDocumentId: string | null
+  setOpenDocumentId: (id: string | null) => void
 }
 
 export const useUIStore = create<UIStore>((set, get) => ({
@@ -93,13 +95,16 @@ export const useUIStore = create<UIStore>((set, get) => ({
   retreatDemoStep: () => set((s) => ({ demoStep: Math.max(s.demoStep - 1, 0) })),
 
   resetKey: 0,
-  resetUI: () => set((s) => ({ resetKey: s.resetKey + 1, demoStep: 0, persona: 'bu', demoGuideOpen: true, kbOpen: false, openPrecedentId: null })),
+  resetUI: () => set((s) => ({ resetKey: s.resetKey + 1, demoStep: 0, persona: 'bu', demoGuideOpen: true, kbOpen: false, openPrecedentId: null, openDocumentId: null })),
 
   kbOpen: false,
   setKbOpen: (v) => set({ kbOpen: v }),
 
   openPrecedentId: null,
   setOpenPrecedentId: (id) => set({ openPrecedentId: id }),
+
+  openDocumentId: null,
+  setOpenDocumentId: (id) => set({ openDocumentId: id }),
 }))
 
 // Sync persona with the current demo step's persona suggestion

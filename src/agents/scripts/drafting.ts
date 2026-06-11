@@ -56,11 +56,32 @@ RESOLVES:
 resolution wording, including the conditions precedent (ACER acknowledgement, RAAEY notification,
 Credit Support Annex) and delegated-authority clauses. ]`
 
+// Section 1 is split so the "Attachments" paragraph can be regenerated from the documents the
+// user actually attaches via the Evidence Collection Assistant (see buildSection1Body).
+export const S1_PREFIX = `Subject: New Cross-Border Energy Trading Framework Agreement — PPC S.A. / Complexul Energetic Oltenia S.A. (CEO S.A.)
+
+Related documents: (a) Feasibility study — Greece–Romania cross-border trading capacity utilisation, Trading & Origination, March 2026; (b) Board decision no. ΔΣ-2024-031 authorising exploratory negotiations with Romanian counterparties; (c) Group Authorisation Matrix (GAM) — bilateral trading agreements, revision 2025.`
+
+export const S1_ATTACHMENTS_PLACEHOLDER =
+  'Attachments (to follow): to be collected and attached via the Evidence Collection Assistant.'
+
+// Rebuilds the section-1 body: prefix + an attachments paragraph derived from attached document
+// titles (lettered A, B, C…), or the "(to follow)" placeholder when nothing is attached yet.
+export function buildSection1Body(attachmentTitles: string[]): string {
+  const para =
+    attachmentTitles.length > 0
+      ? 'Attachments: ' +
+        attachmentTitles.map((t, i) => `(${String.fromCharCode(65 + i)}) ${t}`).join('; ') +
+        '.'
+      : S1_ATTACHMENTS_PLACEHOLDER
+  return `${S1_PREFIX}\n\n${para}`
+}
+
 const templateSections: ContentSection[] = [
   {
     id: 's1',
     title: 'Subject / Related Documents / Attachments',
-    body: 'Subject: New Cross-Border Energy Trading Framework Agreement — PPC S.A. / Complexul Energetic Oltenia S.A. (CEO S.A.)\n\nRelated documents: (a) Feasibility study — Greece–Romania cross-border trading capacity utilisation, Trading & Origination, March 2026; (b) Board decision no. ΔΣ-2024-031 authorising exploratory negotiations with Romanian counterparties; (c) Group Authorisation Matrix (GAM) — bilateral trading agreements, revision 2025.\n\nAttachments (to follow): (A) Draft Master Electricity Trading Agreement; (B) Draft Credit Support Annex; (C) KYC / AML screening report — CEO S.A., 3 June 2026; (D) Finance/Treasury confirmation note, 7 June 2026.',
+    body: buildSection1Body([]),
   },
   {
     id: 's2',

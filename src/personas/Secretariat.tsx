@@ -15,12 +15,15 @@ import {
   Package,
   X,
   BarChart2,
+  Paperclip,
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { useRecoStore } from '@/store'
 import { useUIStore } from '@/store/uiStore'
 import AgentPanel from '@/components/AgentPanel'
+import AttachmentList from '@/components/AttachmentList'
 import RecoCard from '@/components/RecoCard'
+import { DOCS_BY_ID, RECOMMENDED_DOC_IDS } from '@/data/documentRepository'
 import SignatureBlock, { SIG_TIERS } from '@/components/SignatureBlock'
 import StatusBadge from '@/components/StatusBadge'
 import ReadinessMeter from '@/components/ReadinessMeter'
@@ -547,6 +550,32 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
   }
 
   // ════════════════════════════════════════════════
+  // SUPPORTING DOCUMENTS / ATTACHMENTS
+  // ════════════════════════════════════════════════
+
+  if ((reco.attachments?.length ?? 0) > 0) {
+    needY(20)
+    y += 2
+    hRule(BORDER, 0.25, 5)
+    heading('Supporting Documents / Attachments')
+
+    reco.attachments!.forEach((id, i) => {
+      const att = DOCS_BY_ID.get(id)
+      if (!att) return
+      needY(10)
+      doc.setFontSize(8.5)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...MED)
+      doc.text(`${String.fromCharCode(65 + i)}.  ${san(att.title)}`, ML + 4, y)
+      y += 4
+      doc.setFontSize(7)
+      doc.setTextColor(...LIGHT)
+      doc.text(`${att.docType}  ·  ${san(att.owningUnit)}  ·  ${att.protocolNo}`, ML + 8, y)
+      y += 6
+    })
+  }
+
+  // ════════════════════════════════════════════════
   // FOOTERS
   // ════════════════════════════════════════════════
 
@@ -580,6 +609,10 @@ function CompletenessChecklist({ reco }: { reco: Recommendation }) {
         ]
     ),
     { label: 'Regulatory references attached', pass: reco.regulatoryRefs.length > 0 },
+    {
+      label: 'Required supporting evidence attached',
+      pass: RECOMMENDED_DOC_IDS.every((id) => (reco.attachments ?? []).includes(id)),
+    },
     { label: 'BoD deadline not exceeded', pass: daysUntil(reco.bodDeadline) > 0 },
   ]
 
@@ -1304,6 +1337,17 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
             </div>
           )}
 
+          {/* Attachments — supporting evidence, openable */}
+          {(reco.attachments?.length ?? 0) > 0 && (
+            <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-2">
+              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium flex items-center gap-1.5">
+                <Paperclip className="w-3 h-3" />
+                Attachments ({reco.attachments?.length})
+              </p>
+              <AttachmentList docIds={reco.attachments ?? []} />
+            </div>
+          )}
+
           {/* Completeness checklist */}
           <CompletenessChecklist reco={reco} />
 
@@ -1395,6 +1439,17 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
                     </div>
                   ))}
                 </div>
+
+                {/* Supporting documents bundled into the pack */}
+                {(reco.attachments?.length ?? 0) > 0 && (
+                  <div className="pt-2 border-t border-border-subtle space-y-1.5">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium flex items-center gap-1.5">
+                      <Paperclip className="w-3 h-3" />
+                      Bundled attachments ({reco.attachments?.length})
+                    </p>
+                    <AttachmentList docIds={reco.attachments ?? []} />
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

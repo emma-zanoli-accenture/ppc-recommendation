@@ -1,5 +1,6 @@
 import type { AgentScript } from '../engine'
 import { DRAFT_RESOLUTION } from './drafting'
+import { EVIDENCE_MATCH_IDS, MISSING_EVIDENCE, type MissingEvidence } from '../../data/documentRepository'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // New scripted assistants added to mirror the official deck (steps 1, 3, 4, 5, 6).
@@ -100,47 +101,41 @@ Option A is recommended. On completion, its full wording is inserted into the dr
 }
 
 // ── Step 4 · Evidence Collection Assistant ───────────────────────────────────
-export interface EvidenceDoc {
-  id: string
-  name: string
-  status: 'attached' | 'missing'
-}
-
 export interface EvidenceOutput {
-  documents: EvidenceDoc[]
+  // Ranked document-repository ids (search matches)
+  matches: string[]
   applicablePolicies: string[]
+  missingEvidence: MissingEvidence[]
 }
 
 export const evidenceCollectionAgentScript: AgentScript = {
   agentId: 'evidence-collection-assistant',
   agentName: 'Evidence Collection Assistant',
   activityType: 'Agentic support',
-  cognition: ['Perceive'],
+  cognition: ['Perceive', 'Reason', 'Act'],
   steps: [
-    'Scanning the recommendation for referenced attachments (A–D)',
-    'Auto-retrieving supporting documents from the document store',
-    'Identifying applicable policies and regulations',
-    'Flagging missing or outstanding evidence',
+    'Searching the document repository — counterparty, regulatory & financial evidence',
+    'Ranking matches by relevance to the cross-border bilateral scenario',
+    'Identifying applicable policies and regulations per document',
+    'Cross-checking the εισήγηση attachment list (A–D) for completeness',
+    'Flagging required-but-missing evidence as actionable items',
   ],
-  result: `Supporting documents collected and checked against the εισήγηση attachment list.
+  result: `Repository search complete. 14 documents scanned; 12 relevant matches retrieved and ranked, plus 2 low-relevance hits surfaced for transparency.
 
-Attached: (A) Draft Master Electricity Trading Agreement, (B) Draft Credit Support Annex, (C) KYC / AML screening report — CEO S.A. (3 June 2026). Outstanding: (D) Finance/Treasury confirmation note — pending Finance review.
+Top matches map directly to the εισήγηση attachments: the draft Master Agreement term sheet, KYC/due-diligence (CEO S.A.), the regulatory framework memo (REMIT/EMIR/ACER/RAAEY/MiFID II), the market & credit risk assessment, the Credit Support Annex, and the Treasury FX confirmation note. Applicable policies and regulations have been linked per document.
 
-Applicable policies and regulations identified and linked: PPC Group Trading Policy v4.2, Group Authorisation Matrix (2025), REMIT Art. 4, EMIR Refit, RAAEY L.4001/2011 Art. 11. One evidence gap flagged — the Treasury confirmation note will be supplied during Finance review.`,
+1 evidence gap flagged as actionable: the standalone international sanctions screening (EU/UN/OFAC) confirmation is not on file — the KYC report covers AML and anti-corruption only. Attach the recommended documents below, or "Attach all" — each is viewable in preview, and attachments flow into the recommendation's Related Documents / Attachments (Σχετικά / Συνημμένα) and the BoD pack. Request the missing item to log it to the audit trail.`,
   structuredOutput: {
-    documents: [
-      { id: 'doc-a', name: 'Draft Master Electricity Trading Agreement', status: 'attached' },
-      { id: 'doc-b', name: 'Draft Credit Support Annex', status: 'attached' },
-      { id: 'doc-c', name: 'KYC / AML screening report — CEO S.A.', status: 'attached' },
-      { id: 'doc-d', name: 'Finance/Treasury confirmation note', status: 'missing' },
-    ],
+    matches: EVIDENCE_MATCH_IDS,
     applicablePolicies: [
       'PPC Group Trading Policy v4.2',
       'Group Authorisation Matrix (2025)',
       'REMIT Art. 4',
       'EMIR Refit',
       'RAAEY L.4001/2011 Art. 11',
+      'MiFID II Art. 2(1)(j)',
     ],
+    missingEvidence: MISSING_EVIDENCE,
   } satisfies EvidenceOutput,
   sources: [
     { id: 'pb-6', relevance: 'Cross-border BoD-pack evidence checklist' },

@@ -11,10 +11,12 @@ import {
   RotateCcw,
   Clock,
   AlertTriangle,
+  Paperclip,
 } from 'lucide-react'
 import { useRecoStore } from '@/store'
 import { useUIStore } from '@/store/uiStore'
 import AgentPanel from '@/components/AgentPanel'
+import AttachmentList from '@/components/AttachmentList'
 import RecoCard from '@/components/RecoCard'
 import StatusBadge from '@/components/StatusBadge'
 import Timeline from '@/components/Timeline'
@@ -895,6 +897,17 @@ function RFReviewView({
                   <p className="text-sm text-slate-700 leading-relaxed italic">
                     {reco.draftResolution}
                   </p>
+                </div>
+              )}
+
+              {/* Attachments — collected by the Evidence Collection Assistant, openable by reviewers */}
+              {(reco.attachments?.length ?? 0) > 0 && (
+                <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-2">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium flex items-center gap-1.5">
+                    <Paperclip className="w-3 h-3" />
+                    Attachments ({reco.attachments?.length})
+                  </p>
+                  <AttachmentList docIds={reco.attachments ?? []} />
                 </div>
               )}
             </>

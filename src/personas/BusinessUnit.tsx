@@ -17,6 +17,9 @@ import {
   Pencil,
   Scale,
   ExternalLink,
+  Search,
+  Paperclip,
+  Star,
 } from 'lucide-react'
 import { useRecoStore } from '@/store'
 import { useUIStore } from '@/store/uiStore'
@@ -37,7 +40,14 @@ import { statusColors } from '@/lib/statusColors'
 import type { ReviewFunction, Recommendation, RecommendationStatus } from '@/lib/types'
 import { RESOLUTION_STUB } from '@/agents/scripts/drafting'
 import type { DraftingOutput, DraftSuggestion } from '@/agents/scripts/drafting'
-import type { ResolutionOutput } from '@/agents/scripts/assistants'
+import type { ResolutionOutput, EvidenceOutput } from '@/agents/scripts/assistants'
+import { DOC_META } from '@/components/AttachmentList'
+import {
+  DOCS_BY_ID,
+  EVIDENCE_MATCH_IDS,
+  RECOMMENDED_DOC_IDS,
+  MISSING_EVIDENCE,
+} from '@/data/documentRepository'
 
 // ─── Types & constants ────────────────────────────────────────────────────────
 
@@ -441,6 +451,192 @@ function SuggestionCard({
   )
 }
 
+// ─── Evidence Collection — repository search results panel ──────────────────────
+
+const RELEVANCE_CLS: Record<string, string> = {
+  high: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  medium: 'bg-amber-50 text-amber-700 border-amber-200',
+  low: 'bg-surface-raised text-slate-400 border-border-subtle',
+}
+
+const EVIDENCE_POLICIES = (evidenceCollectionAgentScript.structuredOutput as EvidenceOutput).applicablePolicies
+
+function EvidenceResultsPanel({
+  attached,
+  requested,
+  onAttach,
+  onAttachAll,
+  onDetach,
+  onRequest,
+  onOpen,
+}: {
+  attached: Set<string>
+  requested: Set<string>
+  onAttach: (id: string) => void
+  onAttachAll: () => void
+  onDetach: (id: string) => void
+  onRequest: (label: string) => void
+  onOpen: (id: string) => void
+}) {
+  const attachedRecommended = RECOMMENDED_DOC_IDS.filter((id) => attached.has(id)).length
+  const total = RECOMMENDED_DOC_IDS.length
+  const allRecommendedAttached = attachedRecommended === total
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="border border-border-subtle rounded-xl overflow-hidden bg-surface"
+    >
+      <div className="px-4 py-3 bg-surface-raised border-b border-border-subtle flex items-center gap-2">
+        <Search className="w-3.5 h-3.5 text-agent" />
+        <p className="text-xs font-semibold text-slate-700">Repository Search</p>
+        <span className="ml-auto text-[10px] text-slate-400">
+          {attachedRecommended}/{total} recommended attached
+        </span>
+      </div>
+
+      <div className="p-4 space-y-4">
+        {/* Progress */}
+        <div className="space-y-1.5">
+          <div className="h-1.5 bg-surface-raised rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-agent rounded-full"
+              animate={{ width: `${total > 0 ? (attachedRecommended / total) * 100 : 0}%` }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+            />
+          </div>
+          <p className="text-[11px] text-slate-500">
+            {allRecommendedAttached
+              ? 'All recommended documents attached'
+              : `${attachedRecommended} of ${total} recommended documents attached`}
+          </p>
+        </div>
+
+        {/* Search results */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
+              Search results ({EVIDENCE_MATCH_IDS.length})
+            </p>
+            {!allRecommendedAttached && (
+              <button
+                onClick={onAttachAll}
+                className="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-agent hover:bg-agent-dim px-2 py-1 rounded-md transition-colors"
+              >
+                <Paperclip className="w-3 h-3" />
+                Attach all recommended
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+            {EVIDENCE_MATCH_IDS.map((docId) => {
+              const doc = DOCS_BY_ID.get(docId)
+              if (!doc) return null
+              const meta = DOC_META[doc.docType]
+              const isAttached = attached.has(docId)
+              return (
+                <div
+                  key={docId}
+                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border transition-all ${
+                    isAttached ? 'bg-emerald-50/40 border-emerald-200' : 'bg-surface border-border-subtle hover:border-brand/40'
+                  }`}
+                >
+                  <meta.Icon className={`w-4 h-4 flex-shrink-0 ${meta.color}`} />
+                  <button onClick={() => onOpen(docId)} className="flex-1 min-w-0 text-left" title="Open preview">
+                    <span className="text-xs font-medium text-slate-700 truncate flex items-center gap-1">
+                      {doc.title}
+                      {doc.recommended && <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 flex-shrink-0" />}
+                    </span>
+                    <span className="text-[10px] text-slate-400">{doc.owningUnit}</span>
+                  </button>
+                  <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${RELEVANCE_CLS[doc.relevance]}`}>
+                    {doc.relevance}
+                  </span>
+                  {isAttached ? (
+                    <button
+                      onClick={() => onDetach(docId)}
+                      className="text-[10px] font-semibold text-emerald-600 inline-flex items-center gap-1 flex-shrink-0"
+                      title="Attached — click to remove"
+                    >
+                      <Check className="w-3 h-3" />
+                      Attached
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onAttach(docId)}
+                      className="text-[10px] font-bold text-white bg-agent hover:bg-agent-dim px-2 py-1 rounded-md transition-colors flex-shrink-0"
+                    >
+                      Attach
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Applicable policies */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
+            Applicable policies &amp; regulations
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {EVIDENCE_POLICIES.map((p) => (
+              <span key={p} className="text-[10px] font-medium text-brand bg-brand-subtle border border-brand/20 px-2 py-0.5 rounded-full">
+                {p}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Missing evidence — flagged by the assistant, actionable by the owner */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] uppercase tracking-widest text-amber-600 font-medium flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            Missing evidence ({MISSING_EVIDENCE.length})
+          </p>
+          {MISSING_EVIDENCE.map((m, i) => {
+            const isRequested = requested.has(m.label)
+            return (
+              <div
+                key={i}
+                className={`flex items-start gap-2 p-2.5 rounded-lg border ${
+                  isRequested ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'
+                }`}
+              >
+                {isRequested ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs font-medium leading-snug ${isRequested ? 'text-blue-700' : 'text-amber-700'}`}>
+                    {m.label}
+                  </p>
+                  <p className={`text-[10px] leading-snug mt-0.5 ${isRequested ? 'text-blue-600/80' : 'text-amber-600/80'}`}>
+                    {isRequested ? 'Requested — awaiting receipt. Logged to the audit trail.' : m.why}
+                  </p>
+                </div>
+                {!isRequested && (
+                  <button
+                    onClick={() => onRequest(m.label)}
+                    className="text-[10px] font-bold text-white bg-amber-500 hover:bg-amber-600 px-2 py-1 rounded-md transition-colors flex-shrink-0"
+                  >
+                    Request
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 function BUDraftView({
   recoId,
   onBack,
@@ -453,7 +649,16 @@ function BUDraftView({
   const reco = useRecoStore((s) => s.recommendations.find((r) => r.id === recoId))
   const applyDraftingOutput = useRecoStore((s) => s.applyDraftingOutput)
   const updateContent = useRecoStore((s) => s.updateContent)
+  const attachDocuments = useRecoStore((s) => s.attachDocuments)
+  const detachDocument = useRecoStore((s) => s.detachDocument)
+  const requestEvidence = useRecoStore((s) => s.requestEvidence)
   const setOpenPrecedentId = useUIStore((s) => s.setOpenPrecedentId)
+  const setOpenDocumentId = useUIStore((s) => s.setOpenDocumentId)
+
+  // Evidence Collection: reveal the repository-search results once the assistant has run
+  const [evidenceRun, setEvidenceRun] = useState<boolean>(
+    () => (useRecoStore.getState().recommendations.find((r) => r.id === recoId)?.attachments?.length ?? 0) > 0
+  )
 
   // Pre-populate appliedIds on mount by comparing section bodies to template stubs
   const [appliedIds, setAppliedIds] = useState<Set<string>>(() => {
@@ -922,9 +1127,28 @@ function BUDraftView({
 
                 <div>
                   <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Evidence Collection Assistant</h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5 normal-case">supporting documents & applicable policies</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5 normal-case">searches the document repository & attaches supporting evidence</p>
                 </div>
-                <AgentPanel script={evidenceCollectionAgentScript} onSourceClick={setOpenPrecedentId} />
+                <AgentPanel
+                  script={evidenceCollectionAgentScript}
+                  onComplete={() => setEvidenceRun(true)}
+                  onSourceClick={setOpenPrecedentId}
+                />
+
+                {/* Repository search results — attach supporting documents */}
+                <AnimatePresence>
+                  {evidenceRun && (
+                    <EvidenceResultsPanel
+                      attached={new Set(reco.attachments ?? [])}
+                      requested={new Set(reco.evidenceRequests ?? [])}
+                      onAttach={(docId) => attachDocuments(recoId, [docId])}
+                      onAttachAll={() => attachDocuments(recoId, RECOMMENDED_DOC_IDS)}
+                      onDetach={(docId) => detachDocument(recoId, docId)}
+                      onRequest={(label) => requestEvidence(recoId, label)}
+                      onOpen={setOpenDocumentId}
+                    />
+                  )}
+                </AnimatePresence>
               </motion.div>
             )}
           </AnimatePresence>
