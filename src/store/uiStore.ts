@@ -25,7 +25,7 @@ export const DEMO_STEPS: DemoStep[] = [
   {
     persona: 'bu',
     title: 'Step 2 — Draft (Recommendation Co-Pilot + Resolution Assistant)',
-    hint: 'Run the Recommendation Co-Pilot — it scaffolds the 11-section εισήγηση, regulatory refs (REMIT, EMIR, ACER, RAAEY) and the draft resolution. The Resolution Assistant proposes the resolution options; the Evidence Collection Assistant lists supporting documents. Open "Under the Hood" to show the orchestration + P/R/A cognitive layer. Then click "Send for Review".',
+    hint: 'Run the Recommendation Co-Pilot — it scaffolds the 11-section εισήγηση and regulatory refs (REMIT, EMIR, ACER, RAAEY), but leaves section 10 (the resolution) as a blank placeholder. Then run the Resolution Assistant — it proposes the resolution options and writes the recommended wording into section 10. The Evidence Collection Assistant lists supporting documents. Open "Under the Hood" to show the orchestration + P/R/A cognitive layer. Then click "Send for Review".',
     switchHint: 'Next click: "Send for Review"',
   },
   {

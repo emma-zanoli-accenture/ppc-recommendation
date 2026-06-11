@@ -21,7 +21,10 @@ export interface DraftingOutput {
 // s1–s5 and s9–s11 are pre-filled from the business need and PPC template.
 // s6, s7, s8 are stubs awaiting assisted-drafting input.
 
-const DRAFT_RESOLUTION = `Subject: Approval of Bilateral Energy Trading Framework Agreement — PPC S.A. / Complexul Energetic Oltenia S.A. (CEO S.A.)
+// The operative resolution is NOT drafted by the Recommendation Co-Pilot. The Co-Pilot only
+// scaffolds the structural placeholder (RESOLUTION_STUB) in section 10; the Resolution Assistant
+// (step 3) generates and inserts the full DRAFT_RESOLUTION. Exported for the Resolution Assistant.
+export const DRAFT_RESOLUTION = `Subject: Approval of Bilateral Energy Trading Framework Agreement — PPC S.A. / Complexul Energetic Oltenia S.A. (CEO S.A.)
 
 The Board of Directors, having regard to:
 a) Recommendation no. EIS-2026-0042 of the Trading & Origination Division, dated 9 June 2026;
@@ -38,6 +41,20 @@ RESOLVES:
 4. The CEO of PPC S.A. is authorised to execute all documents up to EUR 40M notional. The CTO may sub-delegate EMIR addendum execution to the Group Treasurer. The BoD shall be informed within 10 business days of execution and satisfaction of conditions.
 
 Attachments: (A) Draft Master Agreement; (B) Credit Support Annex; (C) KYC Report — CEO S.A., 3 June 2026; (D) Finance/Treasury Confirmation Note, 7 June 2026.`
+
+// Structural placeholder the Co-Pilot leaves in section 10 — the operative resolution is blank
+// until the Resolution Assistant populates it.
+export const RESOLUTION_STUB = `Subject: [Approval of the proposed arrangement — to be confirmed by the Resolution Assistant]
+
+The Board of Directors, having regard to:
+a) the recommendation of the proposing Business Unit;
+b) the discussion at this meeting,
+
+RESOLVES:
+
+[ Operative resolution pending — run the Resolution Assistant (step 3) to generate the recommended
+resolution wording, including the conditions precedent (ACER acknowledgement, RAAEY notification,
+Credit Support Annex) and delegated-authority clauses. ]`
 
 const templateSections: ContentSection[] = [
   {
@@ -88,7 +105,7 @@ const templateSections: ContentSection[] = [
   {
     id: 's10',
     title: 'Draft BoD Resolution',
-    body: DRAFT_RESOLUTION,
+    body: RESOLUTION_STUB,
   },
   {
     id: 's11',
@@ -157,7 +174,7 @@ export const draftingAgentScript: AgentScript = {
     'Flagging EMIR Refit OTC derivative reporting threshold',
     'Referencing ACER guidance on cross-border capacity allocation',
     'Adding RAAEY prior notification requirement (L.4001/2011 Art. 11)',
-    'Generating draft BoD resolution with conditions precedent — section 10',
+    'Scaffolding the draft-resolution section (10) — handed off to the Resolution Assistant',
     'Inserting signature skeleton — 8 slots across 5 tiers (incl. mandatory Chairman), populates as approvals are collected',
     'Running gap analysis — sections 6, 7, 8 require completion',
   ],
@@ -165,12 +182,13 @@ export const draftingAgentScript: AgentScript = {
 
 3 suggested integrations identified: full regulatory framework with REMIT/EMIR/RAAEY/MiFID II (→ sec. 2), implementation milestones Q3 2026–mid-2027 (→ sec. 6), and 4-risk framework with mitigants (→ sec. 3). 2 information gaps detected: budget/OPEX/cost centre missing from Finance/Treasury (→ sec. 7), counterparty KYC and authorizations pending (→ sec. 8).
 
-Draft BoD resolution (sec. 10) includes conditions precedent: ACER acknowledgement, RAAEY notification, Credit Support Annex. Signature block (sec. 11) scaffolded — 8 pending slots across 5 tiers (incl. mandatory Chairman); slots fill progressively as each function and the Chairman approves.
+The draft-resolution section (sec. 10) has been scaffolded with structural headers only — the operative resolution is intentionally left blank and is handed off to the Resolution Assistant, which proposes resolution options and inserts the recommended wording with its conditions precedent. Signature block (sec. 11) scaffolded — 8 pending slots across 5 tiers (incl. mandatory Chairman); slots fill progressively as each function and the Chairman approves.
 
-Click "Apply" on each item to insert the pre-written content, or click "Auto-complete draft" to resolve all at once.`,
+Click "Apply" on each item to insert the pre-written content, or click "Auto-complete draft" to resolve all at once. Run the Resolution Assistant below to populate section 10.`,
   structuredOutput: {
     templateSections,
-    draftResolution: DRAFT_RESOLUTION,
+    // Left blank — the Resolution Assistant populates the resolution (and section 10).
+    draftResolution: '',
     regulatoryRefs: [
       'REMIT Art. 4',
       'EMIR Refit',

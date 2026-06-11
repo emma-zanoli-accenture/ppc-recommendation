@@ -35,7 +35,9 @@ import {
 } from '@/agents/scripts'
 import { statusColors } from '@/lib/statusColors'
 import type { ReviewFunction, Recommendation, RecommendationStatus } from '@/lib/types'
+import { RESOLUTION_STUB } from '@/agents/scripts/drafting'
 import type { DraftingOutput, DraftSuggestion } from '@/agents/scripts/drafting'
+import type { ResolutionOutput } from '@/agents/scripts/assistants'
 
 // ─── Types & constants ────────────────────────────────────────────────────────
 
@@ -491,6 +493,36 @@ function BUDraftView({
     [recoId, applyDraftingOutput]
   )
 
+  // Resolution Assistant populates section 10 (the Co-Pilot left it as a structural placeholder)
+  const handleResolutionComplete = useCallback(
+    (output: unknown) => {
+      const o = output as ResolutionOutput | null
+      const current = useRecoStore.getState().recommendations.find((r) => r.id === recoId)
+      if (!o?.draftResolution || !current) return
+      updateContent(recoId, {
+        contentSections: current.contentSections.map((s) =>
+          s.id === 's10' ? { ...s, body: o.draftResolution } : s
+        ),
+        draftResolution: o.draftResolution,
+      })
+      // Typewriter the resolution into section 10
+      if (typingTimerRef.current) clearInterval(typingTimerRef.current)
+      let pos = TW_CHARS
+      setTyping({ sectionId: 's10', displayText: o.draftResolution.slice(0, pos) })
+      typingTimerRef.current = setInterval(() => {
+        pos += TW_CHARS
+        if (pos >= o.draftResolution.length) {
+          clearInterval(typingTimerRef.current!)
+          typingTimerRef.current = null
+          setTyping(null)
+        } else {
+          setTyping({ sectionId: 's10', displayText: o.draftResolution.slice(0, pos) })
+        }
+      }, TW_MS)
+    },
+    [recoId, updateContent]
+  )
+
   const applyItem = useCallback(
     (item: DraftSuggestion) => {
       if (appliedIds.has(item.id) || !reco) return
@@ -639,7 +671,7 @@ function BUDraftView({
               {/* Content sections */}
               <div className="space-y-3">
                 {reco.contentSections.map((section, idx) => {
-                  const stub = isStub(section.id)
+                  const stub = isStub(section.id) || (section.id === 's10' && section.body === RESOLUTION_STUB)
                   const typing_ = isTyping(section.id)
                   const hovered = isHovered(section.id)
                   // What to display: live typewriter text > store body
@@ -882,7 +914,11 @@ function BUDraftView({
                   <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Resolution Assistant</h2>
                   <p className="text-[11px] text-slate-400 mt-0.5 normal-case">draft-resolution options · section 10</p>
                 </div>
-                <AgentPanel script={resolutionAssistantScript} onSourceClick={setOpenPrecedentId} />
+                <AgentPanel
+                  script={resolutionAssistantScript}
+                  onComplete={handleResolutionComplete}
+                  onSourceClick={setOpenPrecedentId}
+                />
 
                 <div>
                   <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Evidence Collection Assistant</h2>

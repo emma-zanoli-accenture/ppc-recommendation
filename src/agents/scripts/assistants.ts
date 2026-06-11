@@ -1,4 +1,5 @@
 import type { AgentScript } from '../engine'
+import { DRAFT_RESOLUTION } from './drafting'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // New scripted assistants added to mirror the official deck (steps 1, 3, 4, 5, 6).
@@ -59,6 +60,8 @@ export interface ResolutionOption {
 
 export interface ResolutionOutput {
   options: ResolutionOption[]
+  // Full operative resolution for the recommended option — inserted into section 10.
+  draftResolution: string
 }
 
 export const resolutionAssistantScript: AgentScript = {
@@ -81,13 +84,14 @@ Option B — Approve with delegated authority: as Option A, but delegate executi
 
 Option C — Approve in principle, ratify later: authorise negotiation and bring the final terms back for ratification. Lowest risk, but loses first-mover advantage ahead of HEnEx–HUPX coupling.
 
-Option A is recommended and has been inserted as the draft resolution (section 10).`,
+Option A is recommended. On completion, its full wording is inserted into the draft-resolution section (section 10), which the Recommendation Co-Pilot left as a structural placeholder.`,
   structuredOutput: {
     options: [
       { id: 'opt-a', label: 'Conditional approval', summary: 'Approve subject to ACER / RAAEY / CSA conditions precedent.', recommended: true },
       { id: 'opt-b', label: 'Approve with delegated authority', summary: 'As A, with EMIR addendum execution delegated to the Group Treasurer.', recommended: false },
       { id: 'opt-c', label: 'Approve in principle', summary: 'Authorise negotiation; final terms return to the Board for ratification.', recommended: false },
     ],
+    draftResolution: DRAFT_RESOLUTION,
   } satisfies ResolutionOutput,
   sources: [
     { id: 'pb-1', relevance: 'Conditional-approval resolution wording and condition-precedent structure' },
