@@ -6,14 +6,17 @@ import {
   Scale,
   TrendingUp,
   ShieldCheck,
+  Crown,
   CheckCircle2,
   RotateCcw,
   Clock,
   AlertTriangle,
+  Paperclip,
 } from 'lucide-react'
 import { useRecoStore } from '@/store'
 import { useUIStore } from '@/store/uiStore'
 import AgentPanel from '@/components/AgentPanel'
+import AttachmentList from '@/components/AttachmentList'
 import RecoCard from '@/components/RecoCard'
 import StatusBadge from '@/components/StatusBadge'
 import Timeline from '@/components/Timeline'
@@ -44,7 +47,7 @@ const PAGE = {
 interface FnConfig {
   label: string
   icon: React.ElementType
-  agent: AgentScript
+  agent?: AgentScript
   reviewer: string
 }
 
@@ -67,7 +70,20 @@ const FN_CONFIG: Record<Fn, FnConfig> = {
     agent: complianceReviewAgentScript,
     reviewer: 'A. Nikolaou',
   },
+  // Chairman is a mandatory reviewer (official map). The Chairman signs off on board-fit
+  // rather than running a specialist analysis agent — no agent script attached.
+  chairman: {
+    label: 'Chairman',
+    icon: Crown,
+    reviewer: 'P. Georgiou',
+  },
 }
+
+// All reviewers in the Reviewing Functions / Chairman lane (used for parallel-status displays)
+const ALL_REVIEW_FNS: Fn[] = ['legal', 'finance', 'compliance', 'chairman']
+
+// Short code for the parallel-reviewer dots (Compliance and Chairman both start with "C")
+const fnCode = (f: Fn) => (f === 'chairman' ? 'Ch' : FN_CONFIG[f].label[0])
 
 // ─── Comment generator (from agent structured output) ─────────────────────────
 
@@ -329,7 +345,7 @@ function PriorityRow({
   const tags = getPriorityTags(reco, fn)
   const days = daysUntil(reco.bodDeadline)
   const isTop = rank === 1
-  const otherFns = (['legal', 'finance', 'compliance'] as Fn[]).filter((f) => f !== fn)
+  const otherFns = ALL_REVIEW_FNS.filter((f) => f !== fn)
 
   const REVIEW_DOT: Record<string, string> = {
     Pending: 'bg-slate-300',
@@ -409,7 +425,7 @@ function PriorityRow({
                 className={`w-1.5 h-1.5 rounded-full ${REVIEW_DOT[status] ?? 'bg-slate-300'}`}
                 title={`${FN_CONFIG[f].label}: ${status}`}
               />
-              <span className="text-[10px] text-slate-400">{FN_CONFIG[f].label[0]}</span>
+              <span className="text-[10px] text-slate-400">{fnCode(f)}</span>
             </div>
           )
         })}
@@ -681,7 +697,7 @@ function RFReviewView({
   const alreadyReviewed =
     currentReview?.status === 'Approved' || currentReview?.status === 'Returned'
 
-  const otherFns = (['legal', 'finance', 'compliance'] as Fn[]).filter((f) => f !== activeFn)
+  const otherFns = ALL_REVIEW_FNS.filter((f) => f !== activeFn)
 
   const REVIEW_STATUS_CLS: Record<string, string> = {
     Pending: 'text-slate-400 bg-slate-100 border-slate-200',
@@ -740,7 +756,9 @@ function RFReviewView({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:space-y-0 lg:h-[calc(100vh-8rem)] lg:flex lg:flex-col">
+      {/* Top: breadcrumb + banner + header (fixed) */}
+      <div className="shrink-0 space-y-6 lg:space-y-4 lg:pb-2">
       {/* Breadcrumb */}
       <div className="flex items-center gap-3">
         <button
@@ -812,7 +830,7 @@ function RFReviewView({
                   title={`${FN_CONFIG[fn].label}: ${review.status}`}
                   className={`text-[10px] font-bold px-2 py-1 rounded border ${cls}`}
                 >
-                  {FN_CONFIG[fn].label[0]} · {review.status}
+                  {fnCode(fn)} · {review.status}
                 </span>
               )
             })}
@@ -820,9 +838,11 @@ function RFReviewView({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Document sections */}
-        <div className="lg:col-span-2 space-y-4">
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:flex-1 lg:min-h-0">
+        {/* Document sections (left pane, scrolls independently) */}
+        <div className="lg:col-span-2 space-y-4 lg:overflow-y-auto lg:min-h-0 lg:pr-2">
           <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
             Document
           </h2>
@@ -883,6 +903,17 @@ function RFReviewView({
                   </p>
                 </div>
               )}
+
+              {/* Attachments — collected by the Evidence Collection Assistant, openable by reviewers */}
+              {(reco.attachments?.length ?? 0) > 0 && (
+                <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-2">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium flex items-center gap-1.5">
+                    <Paperclip className="w-3 h-3" />
+                    Attachments ({reco.attachments?.length})
+                  </p>
+                  <AttachmentList docIds={reco.attachments ?? []} />
+                </div>
+              )}
             </>
           )}
 
@@ -895,47 +926,82 @@ function RFReviewView({
           </div>
         </div>
 
-        {/* Right: agent + action */}
-        <div className="space-y-4">
+        {/* Right pane: agent + action (scrolls independently) */}
+        <div className="space-y-4 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
           <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
-            {fnCfg.label} Review Agent
+            {fnCfg.agent ? `${fnCfg.label} Review Agent` : 'Chairman Sign-off'}
           </h2>
 
-          <AgentPanel
-            key={`${recoId}-${activeFn}`}
-            script={fnCfg.agent}
-            inputs={{
-              document_title: reco.title,
-              regulatory_refs: reco.regulatoryRefs.join(', ') || 'none',
-              reviewer: fnCfg.reviewer,
-            }}
-            onComplete={handleAgentComplete}
-            onSourceClick={setOpenPrecedentId}
-          />
+          {fnCfg.agent ? (
+            <>
+              <AgentPanel
+                key={`${recoId}-${activeFn}`}
+                script={fnCfg.agent}
+                inputs={{
+                  document_title: reco.title,
+                  regulatory_refs: reco.regulatoryRefs.join(', ') || 'none',
+                  reviewer: fnCfg.reviewer,
+                }}
+                onComplete={handleAgentComplete}
+                onSourceClick={setOpenPrecedentId}
+              />
 
-          {/* Structured output panel */}
-          <AnimatePresence>
-            {agentOutput != null && (
-              <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-surface border border-border-subtle rounded-xl p-4 space-y-3"
-              >
-                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
-                  Agent Analysis
-                </p>
-                {activeFn === 'legal' && (
-                  <LegalOutputPanel output={agentOutput as LegalReviewOutput} />
+              {/* Structured output panel */}
+              <AnimatePresence>
+                {agentOutput != null && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-surface border border-border-subtle rounded-xl p-4 space-y-3"
+                  >
+                    <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
+                      Agent Analysis
+                    </p>
+                    {activeFn === 'legal' && (
+                      <LegalOutputPanel output={agentOutput as LegalReviewOutput} />
+                    )}
+                    {activeFn === 'finance' && (
+                      <FinanceOutputPanel output={agentOutput as FinanceReviewOutput} />
+                    )}
+                    {activeFn === 'compliance' && (
+                      <ComplianceOutputPanel output={agentOutput as ComplianceReviewOutput} />
+                    )}
+                  </motion.div>
                 )}
-                {activeFn === 'finance' && (
-                  <FinanceOutputPanel output={agentOutput as FinanceReviewOutput} />
-                )}
-                {activeFn === 'compliance' && (
-                  <ComplianceOutputPanel output={agentOutput as ComplianceReviewOutput} />
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </AnimatePresence>
+            </>
+          ) : (
+            /* Chairman: board-fit summary of the specialist functions (mandatory sign-off) */
+            <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Crown className="w-4 h-4 text-brand" />
+                <p className="text-sm font-semibold text-slate-700">Board-fit summary</p>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                The Chairman provides the mandatory governance sign-off after the specialist functions.
+                Current status of the specialist reviews:
+              </p>
+              <div className="space-y-1.5">
+                {(['legal', 'finance', 'compliance'] as Fn[]).map((fn) => {
+                  const review = reco.reviews[fn]
+                  const ok = review.status.startsWith('Approved')
+                  return (
+                    <div key={fn} className="flex items-center justify-between text-xs">
+                      <span className="text-slate-600">{FN_CONFIG[fn].label}</span>
+                      <span className={`flex items-center gap-1 font-medium ${ok ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {ok ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                        {review.status}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-[10px] text-slate-400 italic border-t border-border-subtle pt-2">
+                Readiness score {reco.readinessScore || '—'}/100 · BoD in {days}d. Approve to record the
+                Chairman's sign-off, or return for update.
+              </p>
+            </div>
+          )}
 
           {/* Action area */}
           <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-3">

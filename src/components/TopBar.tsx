@@ -1,4 +1,4 @@
-import { Users, Scale, Crown, BookOpen, RotateCcw, Database } from 'lucide-react'
+import { Users, Scale, Landmark, RotateCcw, Database } from 'lucide-react'
 import { useUIStore, type Persona } from '@/store/uiStore'
 import { useRecoStore } from '@/store'
 import { APP_NAME, PPC_CLIENT } from '@/lib/constants'
@@ -6,11 +6,11 @@ import { APP_NAME, PPC_CLIENT } from '@/lib/constants'
 const PERSONAS: { id: Persona; label: string; sublabel: string; icon: React.ElementType }[] = [
   { id: 'bu', label: 'Rec. Owner', sublabel: '', icon: Users },
   { id: 'review', label: 'Reviewers', sublabel: '', icon: Scale },
-  { id: 'secretariat', label: 'Chairman', sublabel: '', icon: Crown },
+  { id: 'secretariat', label: 'Secretariat', sublabel: '', icon: Landmark },
 ]
 
 export default function TopBar() {
-  const { persona, setPersona, demoGuideOpen, toggleDemoGuide, resetUI, kbOpen, setKbOpen } = useUIStore()
+  const { persona, setPersona, resetUI, kbOpen, setKbOpen } = useUIStore()
   const resetDemo = useRecoStore((s) => s.resetDemo)
 
   const handleReset = () => {
@@ -68,19 +68,6 @@ export default function TopBar() {
         >
           <Database className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Knowledge Base</span>
-        </button>
-
-        <button
-          onClick={toggleDemoGuide}
-          title="Demo Guide"
-          className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border transition-all ${
-            demoGuideOpen
-              ? 'bg-agent-subtle text-agent border-agent-dim/50'
-              : 'text-slate-500 border-border-subtle hover:bg-surface-raised'
-          }`}
-        >
-          <BookOpen className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Guide</span>
         </button>
 
         <button

@@ -15,12 +15,15 @@ import {
   Package,
   X,
   BarChart2,
+  Paperclip,
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { useRecoStore } from '@/store'
 import { useUIStore } from '@/store/uiStore'
 import AgentPanel from '@/components/AgentPanel'
+import AttachmentList from '@/components/AttachmentList'
 import RecoCard from '@/components/RecoCard'
+import { DOCS_BY_ID, RECOMMENDED_DOC_IDS } from '@/data/documentRepository'
 import SignatureBlock, { SIG_TIERS } from '@/components/SignatureBlock'
 import StatusBadge from '@/components/StatusBadge'
 import ReadinessMeter from '@/components/ReadinessMeter'
@@ -43,15 +46,15 @@ const PAGE = {
 }
 
 const PIPELINE_STATUSES: RecommendationStatus[] = [
-  'Submitted to Chairman',
+  'Submitted to Secretariat',
   'Ready for BoD',
   'Submitted to BoD',
 ]
 
-// Statuses visible in the Chairman's dashboard (used to scope the Stats panel)
-const CHAIRMAN_SCOPE: RecommendationStatus[] = [
+// Statuses visible in the Secretariat's control-tower dashboard (used to scope the Stats panel)
+const SECRETARIAT_SCOPE: RecommendationStatus[] = [
   'All Reviews Completed',
-  'Submitted to Chairman',
+  'Submitted to Secretariat',
   'Ready for BoD',
   'Submitted to BoD',
 ]
@@ -60,7 +63,11 @@ const FN_LABELS: Record<ReviewFunction, string> = {
   legal: 'Legal',
   finance: 'Finance',
   compliance: 'Compliance',
+  chairman: 'Chairman',
 }
+
+// Readiness points deducted per open point (requested-but-pending evidence) imported from the audit log
+const EVIDENCE_OPEN_POINT_PENALTY = 5
 
 // ─── PDF generator ────────────────────────────────────────────────────────────
 
@@ -546,6 +553,32 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
   }
 
   // ════════════════════════════════════════════════
+  // SUPPORTING DOCUMENTS / ATTACHMENTS
+  // ════════════════════════════════════════════════
+
+  if ((reco.attachments?.length ?? 0) > 0) {
+    needY(20)
+    y += 2
+    hRule(BORDER, 0.25, 5)
+    heading('Supporting Documents / Attachments')
+
+    reco.attachments!.forEach((id, i) => {
+      const att = DOCS_BY_ID.get(id)
+      if (!att) return
+      needY(10)
+      doc.setFontSize(8.5)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...MED)
+      doc.text(`${String.fromCharCode(65 + i)}.  ${san(att.title)}`, ML + 4, y)
+      y += 4
+      doc.setFontSize(7)
+      doc.setTextColor(...LIGHT)
+      doc.text(`${att.docType}  ·  ${san(att.owningUnit)}  ·  ${att.protocolNo}`, ML + 8, y)
+      y += 6
+    })
+  }
+
+  // ════════════════════════════════════════════════
   // FOOTERS
   // ════════════════════════════════════════════════
 
@@ -575,9 +608,14 @@ function CompletenessChecklist({ reco }: { reco: Recommendation }) {
           { label: 'Legal review approved', pass: reco.reviews.legal.status.startsWith('Approved') },
           { label: 'Finance review approved', pass: reco.reviews.finance.status.startsWith('Approved') },
           { label: 'Compliance review approved', pass: reco.reviews.compliance.status.startsWith('Approved') },
+          { label: 'Chairman sign-off (mandatory)', pass: reco.reviews.chairman.status.startsWith('Approved') },
         ]
     ),
     { label: 'Regulatory references attached', pass: reco.regulatoryRefs.length > 0 },
+    {
+      label: 'Required supporting evidence attached',
+      pass: RECOMMENDED_DOC_IDS.every((id) => (reco.attachments ?? []).includes(id)),
+    },
     { label: 'BoD deadline not exceeded', pass: daysUntil(reco.bodDeadline) > 0 },
   ]
 
@@ -611,11 +649,11 @@ function CompletenessChecklist({ reco }: { reco: Recommendation }) {
 
 const STATUS_ORDER: RecommendationStatus[] = [
   'Draft', 'Under Review', 'Returned for Update', 'All Reviews Completed',
-  'Submitted to Chairman', 'Ready for BoD', 'Submitted to BoD',
+  'Submitted to Secretariat', 'Ready for BoD', 'Submitted to BoD',
 ]
 
 function StatsPanel({ recommendations }: { recommendations: Recommendation[] }) {
-  // recommendations is pre-filtered to CHAIRMAN_SCOPE — only items visible in this dashboard
+  // recommendations is pre-filtered to SECRETARIAT_SCOPE — only items visible in this dashboard
   const total = recommendations.length
 
   // Pipeline funnel (only Chairman stages)
@@ -959,8 +997,8 @@ function SecDashboard({
     },
     {
       label: 'In pipeline',
-      status: 'Submitted to Chairman',
-      items: byBU(recommendations.filter((r) => r.status === 'Submitted to Chairman')),
+      status: 'Submitted to Secretariat',
+      items: byBU(recommendations.filter((r) => r.status === 'Submitted to Secretariat')),
       accent: 'text-violet-700',
     },
     {
@@ -988,8 +1026,8 @@ function SecDashboard({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800">Chairman</h1>
-          <p className="text-slate-500 text-sm mt-1">Control tower · BoD submission pipeline</p>
+          <h1 className="text-2xl font-semibold text-slate-800">Corporate Secretariat</h1>
+          <p className="text-slate-500 text-sm mt-1">Control tower · Governance Workflow Tracking · BoD submission pipeline</p>
         </div>
         <button
           onClick={() => setStatsOpen(true)}
@@ -1111,7 +1149,7 @@ function SecDashboard({
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                <StatsPanel recommendations={recommendations.filter((r) => CHAIRMAN_SCOPE.includes(r.status))} />
+                <StatsPanel recommendations={recommendations.filter((r) => SECRETARIAT_SCOPE.includes(r.status))} />
               </div>
             </motion.div>
           </>
@@ -1140,7 +1178,12 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
       if (!output) return
       const o = output as ReadinessOutput
       setAgentOutput(o)
-      updateReadinessScore(recoId, o.readinessScore)
+      // Open points imported from the activity log (requested-but-pending evidence) each shave a
+      // few points off the readiness score.
+      const current = useRecoStore.getState().recommendations.find((r) => r.id === recoId)
+      const openPoints = current?.evidenceRequests?.length ?? 0
+      const adjusted = Math.max(0, o.readinessScore - openPoints * EVIDENCE_OPEN_POINT_PENALTY)
+      updateReadinessScore(recoId, adjusted)
     },
     [recoId, updateReadinessScore]
   )
@@ -1168,8 +1211,13 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
   const isReady = reco.status === 'Ready for BoD'
   const isSubmitted = reco.status === 'Submitted to BoD'
 
-  const residualGaps = agentOutput?.residualGaps ?? []
+  // Open points imported from the activity log — evidence requested but not yet received
+  const openEvidence = reco.evidenceRequests ?? []
   const completedItems = agentOutput?.completedItems ?? []
+  const residualGaps = [
+    ...(agentOutput?.residualGaps ?? []),
+    ...openEvidence.map((label) => `${label} — requested via activity log, awaiting receipt`),
+  ]
 
   return (
     <div className="space-y-6">
@@ -1302,8 +1350,41 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
             </div>
           )}
 
+          {/* Attachments — supporting evidence, openable */}
+          {(reco.attachments?.length ?? 0) > 0 && (
+            <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-2">
+              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium flex items-center gap-1.5">
+                <Paperclip className="w-3 h-3" />
+                Attachments ({reco.attachments?.length})
+              </p>
+              <AttachmentList docIds={reco.attachments ?? []} />
+            </div>
+          )}
+
           {/* Completeness checklist */}
           <CompletenessChecklist reco={reco} />
+
+          {/* Open points — imported from the activity log (requested-but-pending evidence) */}
+          {openEvidence.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
+              <p className="text-[10px] uppercase tracking-widest text-amber-600 font-medium flex items-center gap-1.5">
+                <AlertTriangle className="w-3 h-3" />
+                Open Points · from activity log ({openEvidence.length})
+              </p>
+              {openEvidence.map((label, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <Clock className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-amber-700 leading-snug">{label}</p>
+                    <p className="text-[10px] text-amber-600/80 leading-snug mt-0.5">
+                      Requested by the owner — awaiting receipt. Lowers the readiness score by{' '}
+                      {EVIDENCE_OPEN_POINT_PENALTY} pts until cleared.
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Signature block — only for recos with s11 (hero path) */}
           {reco.contentSections.some((s) => s.id === 's11') && (
@@ -1393,6 +1474,17 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
                     </div>
                   ))}
                 </div>
+
+                {/* Supporting documents bundled into the pack */}
+                {(reco.attachments?.length ?? 0) > 0 && (
+                  <div className="pt-2 border-t border-border-subtle space-y-1.5">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium flex items-center gap-1.5">
+                      <Paperclip className="w-3 h-3" />
+                      Bundled attachments ({reco.attachments?.length})
+                    </p>
+                    <AttachmentList docIds={reco.attachments ?? []} />
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -1408,9 +1500,14 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
 
         {/* Right: agent + actions */}
         <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
-            Readiness Agent
-          </h2>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
+              Readiness Agent
+            </h2>
+            <p className="text-[11px] text-slate-400 mt-0.5 normal-case">
+              Governance Workflow Tracking · package preparation
+            </p>
+          </div>
 
           <AgentPanel
             key={recoId}
@@ -1418,7 +1515,7 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
             inputs={{
               recommendation: reco.title,
               sections: String(reco.contentSections.length),
-              reviews: 'Legal, Finance, Compliance',
+              reviews: 'Legal, Finance, Compliance, Chairman',
               deadline: String(days) + 'd',
             }}
             onComplete={handleAgentComplete}
@@ -1467,10 +1564,10 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
             )}
           </div>
 
-          {/* Review approvals summary */}
+          {/* Review approvals summary — Approval Tracking Assistant */}
           <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-2">
             <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
-              Review Approvals
+              Review Approvals · Approval Tracking Assistant
             </p>
             {reco.directToChairman?.chairmanApproved ? (
               <div className="flex items-center gap-2 py-1">
@@ -1480,7 +1577,7 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
                 </span>
               </div>
             ) : (
-              (['legal', 'finance', 'compliance'] as ReviewFunction[]).map((fn) => {
+              (['legal', 'finance', 'compliance', 'chairman'] as ReviewFunction[]).map((fn) => {
                 const review = reco.reviews[fn]
                 const ok = review.status === 'Approved'
                 return (

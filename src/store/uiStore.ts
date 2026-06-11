@@ -4,8 +4,8 @@ export type Persona = 'bu' | 'review' | 'secretariat'
 
 export const PERSONA_LABELS: Record<Persona, string> = {
   bu: 'Business Unit',
-  review: 'Legal / Finance / Compliance',
-  secretariat: 'Chairman',
+  review: 'Legal / Finance / Compliance / Chairman',
+  secretariat: 'Corporate Secretariat',
 }
 
 export interface DemoStep {
@@ -18,44 +18,44 @@ export interface DemoStep {
 export const DEMO_STEPS: DemoStep[] = [
   {
     persona: 'bu',
-    title: 'Step 1 — Create the recommendation',
-    hint: 'Click "+ New Recommendation". On the form, click "Use example" to pre-fill the cross-border energy trading scenario — avoids live typing. Then click "Create & Draft".',
+    title: 'Step 1 — Identify the need (Knowledge Retrieval Assistant)',
+    hint: 'Click "+ New Recommendation". On the form, click "Use example" to pre-fill the cross-border energy trading scenario. The Knowledge Retrieval Assistant retrieves similar past recommendations as precedent. Then click "Create & Draft".',
     switchHint: 'Next click: "Create & Draft"',
   },
   {
     persona: 'bu',
-    title: 'Step 2 — Draft with the Drafting Agent',
-    hint: 'Click "Run Drafting Agent". Watch it scaffold 7 sections, regulatory refs (REMIT, EMIR, ACER, RAAEY), and the draft resolution. Open "Under the Hood" to show the IT audience the orchestration. Then click "Send for Review".',
+    title: 'Step 2 — Draft (Recommendation Assistant + Resolution Assistant)',
+    hint: 'Run the Recommendation Assistant — it scaffolds the 11-section εισήγηση and regulatory refs (REMIT, EMIR, ACER, RAAEY), but leaves section 10 (the resolution) as a blank placeholder. Then run the Resolution Assistant — it proposes the resolution options and writes the recommended wording into section 10. Then run the Evidence Collection Assistant — it searches the document repository, ranks matches, and flags missing evidence; click "Attach all recommended" to bundle the supporting documents into the recommendation (they appear under Related Documents / Attachments and are viewable in preview). Open "Under the Hood" to show the orchestration + P/R/A cognitive layer. Then click "Send for Review".',
     switchHint: 'Next click: "Send for Review"',
   },
   {
     persona: 'bu',
-    title: 'Step 3 — Send for review',
-    hint: 'All three functions are pre-selected. Click "Send to 3 functions". Status moves to "Under Review". Switch persona to watch the reviews.',
-    switchHint: '→ Switch to Legal / Finance / Compliance',
+    title: 'Step 3 — Plan & route review (Review Planning + Review Workflow)',
+    hint: 'The Review Planning Assistant suggests the approval timing; the Review Workflow Assistant maps reviewers. Legal, Finance, Compliance and the Chairman (mandatory) are pre-selected. Click "Send for review". Status moves to "Under Review". Switch persona to run the reviews.',
+    switchHint: '→ Switch to Legal / Finance / Compliance / Chairman',
   },
   {
     persona: 'review',
-    title: 'Step 4 — Specialist review',
-    hint: 'Click the cross-border trading item (marked "New"). Run the Legal Review Agent — it flags REMIT/EMIR criticalities. Click "Return for Update". Then switch to Finance and Compliance tabs and click "Approve" on each.',
+    title: 'Step 4 — Review & sign-off',
+    hint: 'Open the cross-border item (marked "New"). Run the Legal Review Agent — it flags REMIT/EMIR criticalities; click "Return for Update". Then on the Finance, Compliance and Chairman tabs, click "Approve" on each (Chairman sign-off is mandatory).',
     switchHint: '→ Switch back to Business Unit',
   },
   {
     persona: 'bu',
-    title: 'Step 5 — Review feedback & accept',
-    hint: 'Click the recommendation showing "Returned for Update". Click "Review Feedback". Apply each of the 3 Legal comments with the "Apply" button — each updates the corresponding section. Once all resolved, click "Verify & accept version". Once all reviews complete, click "Submit to Chairman".',
-    switchHint: '→ Switch to Chairman',
+    title: 'Step 5 — Consolidate feedback & accept (Feedback Co-Pilot)',
+    hint: 'Open the "Returned for Update" item, click "Review Feedback". The Feedback Co-Pilot consolidates the comments — apply each of the 3 Legal comments, then click "Verify & accept version". Once all reviews (incl. Chairman) are complete, click "Submit to Secretariat".',
+    switchHint: '→ Switch to Corporate Secretariat',
   },
   {
     persona: 'secretariat',
-    title: 'Step 6 — Readiness check',
-    hint: 'Find the cross-border trading item in "In pipeline". Click it, then click "Run Readiness Agent". The readiness score and completeness checklist populate. Note the BoD deadline countdown.',
+    title: 'Step 6 — Readiness check (Governance Workflow Tracking)',
+    hint: 'Find the cross-border item in "In pipeline". Open it, then run the Readiness Agent. The readiness score and completeness checklist populate. Note the BoD deadline countdown.',
     switchHint: 'Next click: "Generate BoD Pack"',
   },
   {
     persona: 'secretariat',
-    title: 'Step 7 — BoD pack & submit',
-    hint: 'Click "Generate BoD Pack". Then click "Download PDF" to show the formatted pack on screen. Optionally click "Share with Chairman" to show the touchpoint. Finally click "Submit to BoD" to complete the demo.',
+    title: 'Step 7 — Prepare, distribute & submit to BoD',
+    hint: 'Click "Generate BoD Pack", then "Download PDF" to show the formatted pack. Optionally "Share with Chairman" to show the touchpoint. Finally click "Submit to BoD" to complete the demo.',
     switchHint: 'Demo complete ✓',
   },
 ]
@@ -77,6 +77,8 @@ interface UIStore {
   setKbOpen: (v: boolean) => void
   openPrecedentId: string | null
   setOpenPrecedentId: (id: string | null) => void
+  openDocumentId: string | null
+  setOpenDocumentId: (id: string | null) => void
 }
 
 export const useUIStore = create<UIStore>((set, get) => ({
@@ -93,13 +95,16 @@ export const useUIStore = create<UIStore>((set, get) => ({
   retreatDemoStep: () => set((s) => ({ demoStep: Math.max(s.demoStep - 1, 0) })),
 
   resetKey: 0,
-  resetUI: () => set((s) => ({ resetKey: s.resetKey + 1, demoStep: 0, persona: 'bu', demoGuideOpen: true, kbOpen: false, openPrecedentId: null })),
+  resetUI: () => set((s) => ({ resetKey: s.resetKey + 1, demoStep: 0, persona: 'bu', demoGuideOpen: true, kbOpen: false, openPrecedentId: null, openDocumentId: null })),
 
   kbOpen: false,
   setKbOpen: (v) => set({ kbOpen: v }),
 
   openPrecedentId: null,
   setOpenPrecedentId: (id) => set({ openPrecedentId: id }),
+
+  openDocumentId: null,
+  setOpenDocumentId: (id) => set({ openDocumentId: id }),
 }))
 
 // Sync persona with the current demo step's persona suggestion

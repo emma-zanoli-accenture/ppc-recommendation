@@ -9,6 +9,8 @@ export interface ComplianceReviewOutput {
 export const complianceReviewAgentScript: AgentScript = {
   agentId: 'compliance-review-agent',
   agentName: 'Compliance Review Agent',
+  activityType: 'Agentic support',
+  cognition: ['Perceive', 'Reason'],
   steps: [
     'Reviewing section 5 (Implementation Method) — Group Policy Approval level and compliance',
     'Checking PPC Group Trading Policy v4.2 — commercial thresholds and permitted instruments',

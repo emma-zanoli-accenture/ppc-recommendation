@@ -1,5 +1,15 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 
+// Deck legend — activity types and the cognitive layer (Perceive / Reason / Act).
+export type ActivityType =
+  | 'User activity'
+  | 'Fully automatic'
+  | 'Agentic support'
+  | 'ETRM-licensed tool'
+  | 'Reinvented with AI'
+
+export type Cognition = 'Perceive' | 'Reason' | 'Act'
+
 export interface AgentScript {
   agentId: string
   agentName: string
@@ -7,6 +17,9 @@ export interface AgentScript {
   result: string
   structuredOutput?: unknown
   sources?: { id: string; relevance: string }[]
+  // Deck-faithful tags surfaced in "Under the Hood"
+  activityType?: ActivityType
+  cognition?: Cognition[]
 }
 
 export type AgentPhase = 'idle' | 'thinking' | 'stepping' | 'streaming' | 'done'

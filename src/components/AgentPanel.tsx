@@ -1,10 +1,17 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, ChevronDown, Play, RotateCcw, Zap, Package, ListOrdered, Code2, ArrowRight, BookOpen, ExternalLink } from 'lucide-react'
+import { Check, ChevronDown, Play, RotateCcw, Zap, Package, ListOrdered, Code2, ArrowRight, BookOpen, ExternalLink, Layers } from 'lucide-react'
 import { useAgent } from '@/agents/engine'
-import type { AgentScript } from '@/agents/engine'
+import type { AgentScript, Cognition } from '@/agents/engine'
 import { KB_PAST_RECS_BY_ID } from '@/data/knowledgeBase'
 import AgentBadge from './AgentBadge'
+
+// Cognitive-layer badge colours (deck legend: Perceive / Reason / Act)
+const COG_CLS: Record<Cognition, string> = {
+  Perceive: 'bg-blue-50 text-blue-600 border-blue-200',
+  Reason: 'bg-agent-subtle text-agent border-agent-dim/30',
+  Act: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+}
 
 interface Props {
   script: AgentScript
@@ -120,6 +127,41 @@ function UnderTheHoodPanel({
           agent id: <span className="text-slate-500">{script.agentId}</span>
         </p>
       </div>
+
+      {/* Classification — deck legend: activity type + cognitive layer (P/R/A) */}
+      {(script.activityType || (script.cognition && script.cognition.length > 0)) && (
+        <div>
+          <p className="text-[10px] uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1.5">
+            <Layers className="w-3 h-3" />
+            Classification
+          </p>
+          <div className="flex flex-wrap items-center gap-1.5 pl-1">
+            {script.activityType && (
+              <span className="inline-flex items-center gap-1 bg-agent-subtle text-agent border border-agent-dim/30 px-2 py-0.5 rounded-md text-[10px] font-medium">
+                {script.activityType}
+              </span>
+            )}
+            {script.cognition?.map((c) => {
+              const cls = COG_CLS[c]
+              return (
+                <span
+                  key={c}
+                  title={`Cognitive layer: ${c}`}
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${cls}`}
+                >
+                  {c[0]}
+                  <span className="font-medium">{c}</span>
+                </span>
+              )
+            })}
+          </div>
+          <p className="text-[9px] text-slate-400 mt-1.5 pl-1">
+            Cognitive layer — <span className="text-blue-500 font-semibold">P</span>erceive ·{' '}
+            <span className="text-agent font-semibold">R</span>eason ·{' '}
+            <span className="text-emerald-600 font-semibold">A</span>ct
+          </p>
+        </div>
+      )}
 
       {/* Inputs */}
       {inputs && Object.keys(inputs).length > 0 && (

@@ -21,7 +21,10 @@ export interface DraftingOutput {
 // s1–s5 and s9–s11 are pre-filled from the business need and PPC template.
 // s6, s7, s8 are stubs awaiting assisted-drafting input.
 
-const DRAFT_RESOLUTION = `Subject: Approval of Bilateral Energy Trading Framework Agreement — PPC S.A. / Complexul Energetic Oltenia S.A. (CEO S.A.)
+// The operative resolution is NOT drafted by the Recommendation Assistant. The assistant only
+// scaffolds the structural placeholder (RESOLUTION_STUB) in section 10; the Resolution Assistant
+// (step 3) generates and inserts the full DRAFT_RESOLUTION. Exported for the Resolution Assistant.
+export const DRAFT_RESOLUTION = `Subject: Approval of Bilateral Energy Trading Framework Agreement — PPC S.A. / Complexul Energetic Oltenia S.A. (CEO S.A.)
 
 The Board of Directors, having regard to:
 a) Recommendation no. EIS-2026-0042 of the Trading & Origination Division, dated 9 June 2026;
@@ -39,11 +42,46 @@ RESOLVES:
 
 Attachments: (A) Draft Master Agreement; (B) Credit Support Annex; (C) KYC Report — CEO S.A., 3 June 2026; (D) Finance/Treasury Confirmation Note, 7 June 2026.`
 
+// Structural placeholder the Co-Pilot leaves in section 10 — the operative resolution is blank
+// until the Resolution Assistant populates it.
+export const RESOLUTION_STUB = `Subject: [Approval of the proposed arrangement — to be confirmed by the Resolution Assistant]
+
+The Board of Directors, having regard to:
+a) the recommendation of the proposing Business Unit;
+b) the discussion at this meeting,
+
+RESOLVES:
+
+[ Operative resolution pending — run the Resolution Assistant (step 3) to generate the recommended
+resolution wording, including the conditions precedent (ACER acknowledgement, RAAEY notification,
+Credit Support Annex) and delegated-authority clauses. ]`
+
+// Section 1 is split so the "Attachments" paragraph can be regenerated from the documents the
+// user actually attaches via the Evidence Collection Assistant (see buildSection1Body).
+export const S1_PREFIX = `Subject: New Cross-Border Energy Trading Framework Agreement — PPC S.A. / Complexul Energetic Oltenia S.A. (CEO S.A.)
+
+Related documents: (a) Feasibility study — Greece–Romania cross-border trading capacity utilisation, Trading & Origination, March 2026; (b) Board decision no. ΔΣ-2024-031 authorising exploratory negotiations with Romanian counterparties; (c) Group Authorisation Matrix (GAM) — bilateral trading agreements, revision 2025.`
+
+export const S1_ATTACHMENTS_PLACEHOLDER =
+  'Attachments (to follow): to be collected and attached via the Evidence Collection Assistant.'
+
+// Rebuilds the section-1 body: prefix + an attachments paragraph derived from attached document
+// titles (lettered A, B, C…), or the "(to follow)" placeholder when nothing is attached yet.
+export function buildSection1Body(attachmentTitles: string[]): string {
+  const para =
+    attachmentTitles.length > 0
+      ? 'Attachments: ' +
+        attachmentTitles.map((t, i) => `(${String.fromCharCode(65 + i)}) ${t}`).join('; ') +
+        '.'
+      : S1_ATTACHMENTS_PLACEHOLDER
+  return `${S1_PREFIX}\n\n${para}`
+}
+
 const templateSections: ContentSection[] = [
   {
     id: 's1',
     title: 'Subject / Related Documents / Attachments',
-    body: 'Subject: New Cross-Border Energy Trading Framework Agreement — PPC S.A. / Complexul Energetic Oltenia S.A. (CEO S.A.)\n\nRelated documents: (a) Feasibility study — Greece–Romania cross-border trading capacity utilisation, Trading & Origination, March 2026; (b) Board decision no. ΔΣ-2024-031 authorising exploratory negotiations with Romanian counterparties; (c) Group Authorisation Matrix (GAM) — bilateral trading agreements, revision 2025.\n\nAttachments (to follow): (A) Draft Master Electricity Trading Agreement; (B) Draft Credit Support Annex; (C) KYC / AML screening report — CEO S.A., 3 June 2026; (D) Finance/Treasury confirmation note, 7 June 2026.',
+    body: buildSection1Body([]),
   },
   {
     id: 's2',
@@ -88,12 +126,12 @@ const templateSections: ContentSection[] = [
   {
     id: 's10',
     title: 'Draft BoD Resolution',
-    body: DRAFT_RESOLUTION,
+    body: RESOLUTION_STUB,
   },
   {
     id: 's11',
     title: 'Signatures & Approvals',
-    body: '[Signature block — 7 slots across 4 tiers (Hierarchy, Parallel Bodies, Group General Directors, Legal Counsel / GD Corp Gov). Slots populate progressively as each function approves.]',
+    body: '[Signature block — 8 slots across 5 tiers (Hierarchy, Parallel Bodies, Chairman, Group General Directors, Legal Counsel / GD Corp Gov). Slots populate progressively as each function — and the Chairman — approves.]',
   },
 ]
 
@@ -145,8 +183,10 @@ const gaps: DraftSuggestion[] = [
 // ─── Agent script ─────────────────────────────────────────────────────────────
 
 export const draftingAgentScript: AgentScript = {
-  agentId: 'drafting-agent',
-  agentName: 'Drafting Agent',
+  agentId: 'recommendation-assistant',
+  agentName: 'Recommendation Assistant',
+  activityType: 'Reinvented with AI',
+  cognition: ['Perceive', 'Reason', 'Act'],
   steps: [
     'Loading PPC recommendation template — 11-section εισήγηση format',
     'Parsing business need: Greece–Romania interconnector, 500 GWh/year',
@@ -155,20 +195,21 @@ export const draftingAgentScript: AgentScript = {
     'Flagging EMIR Refit OTC derivative reporting threshold',
     'Referencing ACER guidance on cross-border capacity allocation',
     'Adding RAAEY prior notification requirement (L.4001/2011 Art. 11)',
-    'Generating draft BoD resolution with conditions precedent — section 10',
-    'Inserting signature skeleton — 7 slots across 4 tiers, populates as approvals are collected',
+    'Scaffolding the draft-resolution section (10) — handed off to the Resolution Assistant',
+    'Inserting signature skeleton — 8 slots across 5 tiers (incl. mandatory Chairman), populates as approvals are collected',
     'Running gap analysis — sections 6, 7, 8 require completion',
   ],
   result: `Template scaffolded across 11 sections (PPC εισήγηση format). Sections 1–5 and 9–11 are fully drafted. Sections 6, 7, and 8 require completion via the assisted-drafting items below.
 
 3 suggested integrations identified: full regulatory framework with REMIT/EMIR/RAAEY/MiFID II (→ sec. 2), implementation milestones Q3 2026–mid-2027 (→ sec. 6), and 4-risk framework with mitigants (→ sec. 3). 2 information gaps detected: budget/OPEX/cost centre missing from Finance/Treasury (→ sec. 7), counterparty KYC and authorizations pending (→ sec. 8).
 
-Draft BoD resolution (sec. 10) includes conditions precedent: ACER acknowledgement, RAAEY notification, Credit Support Annex. Signature block (sec. 11) scaffolded — 7 pending slots across 4 tiers; slots fill progressively as each function approves.
+The draft-resolution section (sec. 10) has been scaffolded with structural headers only — the operative resolution is intentionally left blank and is handed off to the Resolution Assistant, which proposes resolution options and inserts the recommended wording with its conditions precedent. Signature block (sec. 11) scaffolded — 8 pending slots across 5 tiers (incl. mandatory Chairman); slots fill progressively as each function and the Chairman approves.
 
-Click "Apply" on each item to insert the pre-written content, or click "Auto-complete draft" to resolve all at once.`,
+Click "Apply" on each item to insert the pre-written content, or click "Auto-complete draft" to resolve all at once. Run the Resolution Assistant below to populate section 10.`,
   structuredOutput: {
     templateSections,
-    draftResolution: DRAFT_RESOLUTION,
+    // Left blank — the Resolution Assistant populates the resolution (and section 10).
+    draftResolution: '',
     regulatoryRefs: [
       'REMIT Art. 4',
       'EMIR Refit',

@@ -17,6 +17,10 @@ import {
   Pencil,
   Scale,
   ExternalLink,
+  Search,
+  Paperclip,
+  Star,
+  ScrollText,
 } from 'lucide-react'
 import { useRecoStore } from '@/store'
 import { useUIStore } from '@/store/uiStore'
@@ -25,10 +29,27 @@ import RecoCard from '@/components/RecoCard'
 import SignatureBlock from '@/components/SignatureBlock'
 import StatusBadge from '@/components/StatusBadge'
 import Timeline from '@/components/Timeline'
-import { draftingAgentScript } from '@/agents/scripts'
+import {
+  draftingAgentScript,
+  knowledgeRetrievalAssistantScript,
+  resolutionAssistantScript,
+  evidenceCollectionAgentScript,
+  reviewPlanningAgentScript,
+  reviewWorkflowAgentScript,
+} from '@/agents/scripts'
 import { statusColors } from '@/lib/statusColors'
 import type { ReviewFunction, Recommendation, RecommendationStatus } from '@/lib/types'
+import { RESOLUTION_STUB } from '@/agents/scripts/drafting'
 import type { DraftingOutput, DraftSuggestion } from '@/agents/scripts/drafting'
+import type { ResolutionOutput, EvidenceOutput } from '@/agents/scripts/assistants'
+import { DOC_META } from '@/components/AttachmentList'
+import SaveControl from '@/components/SaveControl'
+import {
+  DOCS_BY_ID,
+  EVIDENCE_MATCH_IDS,
+  RECOMMENDED_DOC_IDS,
+  MISSING_EVIDENCE,
+} from '@/data/documentRepository'
 
 // ─── Types & constants ────────────────────────────────────────────────────────
 
@@ -45,16 +66,18 @@ const EXAMPLE_TITLE = 'New cross-border energy trading agreement'
 const EXAMPLE_BUSINESS_NEED =
   'PPC S.A. seeks to capitalise on its cross-border transmission capacity between Greece and Romania (ENTSO-E NTC: 400 MW) by entering into a bilateral energy trading framework with Complexul Energetic Oltenia S.A. (CEO S.A.) covering up to 500 GWh/year of physical electricity delivery. The arrangement will enable PPC to optimise generation dispatch, balance seasonal load curves, and establish a commercial foothold in the Romanian forward market ahead of the HEnEx–HUPX market coupling milestone scheduled for 2027. This recommendation seeks BoD approval for the framework agreement and associated regulatory compliance steps.'
 
-const FN_INFO: { fn: ReviewFunction; label: string; description: string }[] = [
+const FN_INFO: { fn: ReviewFunction; label: string; description: string; mandatory?: boolean }[] = [
   { fn: 'legal', label: 'Legal', description: 'Regulatory review — REMIT, EMIR, RAAEY, MiFID II' },
   { fn: 'finance', label: 'Finance', description: 'Financial impact, budget coverage, FX risk' },
   { fn: 'compliance', label: 'Compliance', description: 'Internal policy and governance alignment' },
+  { fn: 'chairman', label: 'Chairman', description: 'Mandatory governance sign-off — cross-border arrangements > EUR 10M', mandatory: true },
 ]
 
 const FN_LABELS: Record<ReviewFunction, string> = {
   legal: 'Legal',
   finance: 'Finance',
   compliance: 'Compliance',
+  chairman: 'Chairman',
 }
 
 const REVIEW_STATUS_CLS: Record<string, string> = {
@@ -138,6 +161,71 @@ function RegulatoryRefBadge({
             <p className="text-xs text-slate-600 leading-relaxed">{info?.description}</p>
             <p className="text-[10px] text-slate-400 border-t border-border-subtle pt-1.5 flex items-center gap-1">
               <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+              {info?.source}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// ─── Internal policy reference data & badge ──────────────────────────────────
+// Distinct from regulations: internal PPC policies, shown in a slate/document style so they
+// are not confused with the (brand-blue) external regulation badges.
+
+const POLICY_REF_INFO: Record<string, { fullName: string; description: string; source: string }> = {
+  'PPC Group Trading Policy v4.2': {
+    fullName: 'PPC Group Trading Policy v4.2',
+    description: 'Internal policy defining permitted trading instruments (Schedule A), commercial thresholds and approval levels for energy trading activity.',
+    source: 'Internal Policy · PPC Group Corporate Governance',
+  },
+  'Group Authorisation Matrix (2025)': {
+    fullName: 'Group Authorisation Matrix (GAM) — 2025 revision',
+    description: 'Delegation-of-authority matrix setting approval levels by value and transaction type. Bilateral trading agreements above EUR 10M require Board of Directors approval; no sub-delegation permitted.',
+    source: 'Internal Policy · PPC Group Corporate Governance',
+  },
+}
+
+function PolicyBadge({
+  policyKey,
+  isOpen,
+  onToggle,
+}: {
+  policyKey: string
+  isOpen: boolean
+  onToggle: () => void
+}) {
+  const info = POLICY_REF_INFO[policyKey]
+  return (
+    <div className="relative">
+      <button
+        onClick={onToggle}
+        className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-all ${
+          isOpen
+            ? 'bg-slate-600 text-white border-slate-600 shadow-sm'
+            : 'bg-surface-raised text-slate-600 border-border-strong hover:border-slate-400 hover:bg-surface'
+        }`}
+      >
+        <ScrollText className="w-3 h-3 flex-shrink-0" />
+        <span>{policyKey}</span>
+        <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown className="w-3 h-3 flex-shrink-0" />
+        </motion.span>
+      </button>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+            className="absolute left-0 top-full mt-1.5 z-30 w-64 bg-surface border border-border-strong rounded-xl shadow-lg p-3 space-y-1.5"
+          >
+            <p className="text-xs font-semibold text-slate-800 leading-snug">{info?.fullName ?? policyKey}</p>
+            <p className="text-xs text-slate-600 leading-relaxed">{info?.description}</p>
+            <p className="text-[10px] text-slate-400 border-t border-border-subtle pt-1.5 flex items-center gap-1">
+              <ScrollText className="w-2.5 h-2.5 flex-shrink-0" />
               {info?.source}
             </p>
           </motion.div>
@@ -253,6 +341,7 @@ function BUCreate({ onBack, onCreate }: { onBack: () => void; onCreate: (id: str
   const [title, setTitle] = useState('')
   const [businessNeed, setBusinessNeed] = useState('')
   const createRecommendation = useRecoStore((s) => s.createRecommendation)
+  const setOpenPrecedentId = useUIStore((s) => s.setOpenPrecedentId)
 
   const useExample = () => {
     setTitle(EXAMPLE_TITLE)
@@ -330,6 +419,24 @@ function BUCreate({ onBack, onCreate }: { onBack: () => void; onCreate: (id: str
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
+      </div>
+
+      {/* Step 1 · Knowledge Retrieval Assistant — precedent retrieval */}
+      <div className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Knowledge Retrieval Assistant</h2>
+          <p className="text-[11px] text-slate-400 mt-0.5 normal-case">
+            retrieves similar past recommendations as precedent · orchestrated by Recopilot
+          </p>
+        </div>
+        <AgentPanel
+          script={knowledgeRetrievalAssistantScript}
+          inputs={{
+            business_need: (businessNeed || EXAMPLE_BUSINESS_NEED).slice(0, 80) + '…',
+            scope: 'Cross-border energy trading · Greece–Romania',
+          }}
+          onSourceClick={setOpenPrecedentId}
+        />
       </div>
     </div>
   )
@@ -411,6 +518,212 @@ function SuggestionCard({
   )
 }
 
+// ─── Evidence Collection — repository search results panel ──────────────────────
+
+const RELEVANCE_CLS: Record<string, string> = {
+  high: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  medium: 'bg-amber-50 text-amber-700 border-amber-200',
+  low: 'bg-surface-raised text-slate-400 border-border-subtle',
+}
+
+const EVIDENCE_POLICIES = (evidenceCollectionAgentScript.structuredOutput as EvidenceOutput).applicablePolicies
+
+function EvidenceResultsPanel({
+  attached,
+  requested,
+  onAttach,
+  onAttachAll,
+  onDetach,
+  onRequest,
+  onOpen,
+}: {
+  attached: Set<string>
+  requested: Set<string>
+  onAttach: (id: string) => void
+  onAttachAll: () => void
+  onDetach: (id: string) => void
+  onRequest: (label: string) => void
+  onOpen: (id: string) => void
+}) {
+  const attachedRecommended = RECOMMENDED_DOC_IDS.filter((id) => attached.has(id)).length
+  const total = RECOMMENDED_DOC_IDS.length
+  const allRecommendedAttached = attachedRecommended === total
+  const [activeRef, setActiveRef] = useState<string | null>(null)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="border border-border-subtle rounded-xl overflow-hidden bg-surface"
+    >
+      <div className="px-4 py-3 bg-surface-raised border-b border-border-subtle flex items-center gap-2">
+        <Search className="w-3.5 h-3.5 text-agent" />
+        <p className="text-xs font-semibold text-slate-700">Repository Search</p>
+        <span className="ml-auto text-[10px] text-slate-400">
+          {attachedRecommended}/{total} recommended attached
+        </span>
+      </div>
+
+      <div className="p-4 space-y-4">
+        {/* Progress */}
+        <div className="space-y-1.5">
+          <div className="h-1.5 bg-surface-raised rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-agent rounded-full"
+              animate={{ width: `${total > 0 ? (attachedRecommended / total) * 100 : 0}%` }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+            />
+          </div>
+          <p className="text-[11px] text-slate-500">
+            {allRecommendedAttached
+              ? 'All recommended documents attached'
+              : `${attachedRecommended} of ${total} recommended documents attached`}
+          </p>
+        </div>
+
+        {/* Search results */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
+              Search results ({EVIDENCE_MATCH_IDS.length})
+            </p>
+            {!allRecommendedAttached && (
+              <button
+                onClick={onAttachAll}
+                className="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-agent hover:bg-agent-dim px-2 py-1 rounded-md transition-colors"
+              >
+                <Paperclip className="w-3 h-3" />
+                Attach all recommended
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+            {EVIDENCE_MATCH_IDS.map((docId) => {
+              const doc = DOCS_BY_ID.get(docId)
+              if (!doc) return null
+              const meta = DOC_META[doc.docType]
+              const isAttached = attached.has(docId)
+              return (
+                <div
+                  key={docId}
+                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border transition-all ${
+                    isAttached ? 'bg-emerald-50/40 border-emerald-200' : 'bg-surface border-border-subtle hover:border-brand/40'
+                  }`}
+                >
+                  <meta.Icon className={`w-4 h-4 flex-shrink-0 ${meta.color}`} />
+                  <button onClick={() => onOpen(docId)} className="flex-1 min-w-0 text-left" title="Open preview">
+                    <span className="text-xs font-medium text-slate-700 truncate flex items-center gap-1">
+                      {doc.title}
+                      {doc.recommended && <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 flex-shrink-0" />}
+                    </span>
+                    <span className="text-[10px] text-slate-400">{doc.owningUnit}</span>
+                  </button>
+                  <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${RELEVANCE_CLS[doc.relevance]}`}>
+                    {doc.relevance}
+                  </span>
+                  {isAttached ? (
+                    <button
+                      onClick={() => onDetach(docId)}
+                      className="text-[10px] font-semibold text-emerald-600 inline-flex items-center gap-1 flex-shrink-0"
+                      title="Attached — click to remove"
+                    >
+                      <Check className="w-3 h-3" />
+                      Attached
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onAttach(docId)}
+                      className="text-[10px] font-bold text-white bg-agent hover:bg-agent-dim px-2 py-1 rounded-md transition-colors flex-shrink-0"
+                    >
+                      Attach
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Applicable policies */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
+            Applicable policies &amp; regulations
+          </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {EVIDENCE_POLICIES.map((p) =>
+              REG_REF_INFO[p] ? (
+                <RegulatoryRefBadge
+                  key={p}
+                  refKey={p}
+                  isOpen={activeRef === p}
+                  onToggle={() => setActiveRef(activeRef === p ? null : p)}
+                />
+              ) : POLICY_REF_INFO[p] ? (
+                <PolicyBadge
+                  key={p}
+                  policyKey={p}
+                  isOpen={activeRef === p}
+                  onToggle={() => setActiveRef(activeRef === p ? null : p)}
+                />
+              ) : (
+                <span
+                  key={p}
+                  className="text-[10px] font-medium text-brand bg-brand-subtle border border-brand/20 px-2 py-0.5 rounded-full"
+                >
+                  {p}
+                </span>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Missing evidence — flagged by the assistant, actionable by the owner */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] uppercase tracking-widest text-amber-600 font-medium flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            Missing evidence ({MISSING_EVIDENCE.length})
+          </p>
+          {MISSING_EVIDENCE.map((m, i) => {
+            const isRequested = requested.has(m.label)
+            return (
+              <div
+                key={i}
+                className={`flex items-start gap-2 p-2.5 rounded-lg border ${
+                  isRequested ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'
+                }`}
+              >
+                {isRequested ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs font-medium leading-snug ${isRequested ? 'text-blue-700' : 'text-amber-700'}`}>
+                    {m.label}
+                  </p>
+                  <p className={`text-[10px] leading-snug mt-0.5 ${isRequested ? 'text-blue-600/80' : 'text-amber-600/80'}`}>
+                    {isRequested ? 'Requested — awaiting receipt. Logged to the audit trail.' : m.why}
+                  </p>
+                </div>
+                {!isRequested && (
+                  <button
+                    onClick={() => onRequest(m.label)}
+                    className="text-[10px] font-bold text-white bg-amber-500 hover:bg-amber-600 px-2 py-1 rounded-md transition-colors flex-shrink-0"
+                  >
+                    Request
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 function BUDraftView({
   recoId,
   onBack,
@@ -423,7 +736,16 @@ function BUDraftView({
   const reco = useRecoStore((s) => s.recommendations.find((r) => r.id === recoId))
   const applyDraftingOutput = useRecoStore((s) => s.applyDraftingOutput)
   const updateContent = useRecoStore((s) => s.updateContent)
+  const attachDocuments = useRecoStore((s) => s.attachDocuments)
+  const detachDocument = useRecoStore((s) => s.detachDocument)
+  const requestEvidence = useRecoStore((s) => s.requestEvidence)
   const setOpenPrecedentId = useUIStore((s) => s.setOpenPrecedentId)
+  const setOpenDocumentId = useUIStore((s) => s.setOpenDocumentId)
+
+  // Evidence Collection: reveal the repository-search results once the assistant has run
+  const [evidenceRun, setEvidenceRun] = useState<boolean>(
+    () => (useRecoStore.getState().recommendations.find((r) => r.id === recoId)?.attachments?.length ?? 0) > 0
+  )
 
   // Pre-populate appliedIds on mount by comparing section bodies to template stubs
   const [appliedIds, setAppliedIds] = useState<Set<string>>(() => {
@@ -461,6 +783,36 @@ function BUDraftView({
       })
     },
     [recoId, applyDraftingOutput]
+  )
+
+  // Resolution Assistant populates section 10 (the Co-Pilot left it as a structural placeholder)
+  const handleResolutionComplete = useCallback(
+    (output: unknown) => {
+      const o = output as ResolutionOutput | null
+      const current = useRecoStore.getState().recommendations.find((r) => r.id === recoId)
+      if (!o?.draftResolution || !current) return
+      updateContent(recoId, {
+        contentSections: current.contentSections.map((s) =>
+          s.id === 's10' ? { ...s, body: o.draftResolution } : s
+        ),
+        draftResolution: o.draftResolution,
+      })
+      // Typewriter the resolution into section 10
+      if (typingTimerRef.current) clearInterval(typingTimerRef.current)
+      let pos = TW_CHARS
+      setTyping({ sectionId: 's10', displayText: o.draftResolution.slice(0, pos) })
+      typingTimerRef.current = setInterval(() => {
+        pos += TW_CHARS
+        if (pos >= o.draftResolution.length) {
+          clearInterval(typingTimerRef.current!)
+          typingTimerRef.current = null
+          setTyping(null)
+        } else {
+          setTyping({ sectionId: 's10', displayText: o.draftResolution.slice(0, pos) })
+        }
+      }, TW_MS)
+    },
+    [recoId, updateContent]
   )
 
   const applyItem = useCallback(
@@ -533,32 +885,39 @@ function BUDraftView({
   const isHovered = (sectionId: string) => hoverSectionId === sectionId
 
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Dashboard
-        </button>
-        <span className="text-slate-300">/</span>
-        <StatusBadge status={reco.status} />
+    <div className="space-y-6 lg:space-y-0 lg:h-[calc(100vh-8rem)] lg:flex lg:flex-col">
+      {/* Top: breadcrumb + title (fixed) */}
+      <div className="shrink-0 space-y-4 lg:pb-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Dashboard
+          </button>
+          <span className="text-slate-300">/</span>
+          <StatusBadge status={reco.status} />
+          {hasSections && (
+            <div className="ml-auto">
+              <SaveControl />
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-800">{reco.title}</h1>
+          <p className="text-slate-500 text-sm mt-1">{reco.businessUnit} · {reco.owner}</p>
+        </div>
       </div>
 
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-800">{reco.title}</h1>
-        <p className="text-slate-500 text-sm mt-1">{reco.businessUnit} · {reco.owner}</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ── Document ────────────────────────────────────────────── */}
-        <div className="lg:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:flex-1 lg:min-h-0">
+        {/* ── Document (left pane, scrolls independently) ──────────── */}
+        <div className="lg:col-span-2 space-y-4 lg:overflow-y-auto lg:min-h-0 lg:pr-2">
           {!hasSections ? (
             <div className="bg-surface border border-dashed border-border-strong rounded-xl p-10 text-center space-y-2">
               <p className="text-slate-500 text-sm font-medium">
-                Run the Drafting Agent to scaffold the recommendation document.
+                Run the Recommendation Assistant to scaffold the recommendation document.
               </p>
               <p className="text-xs text-slate-400 italic">
                 11 sections (PPC εισήγηση format) · regulatory framework · draft resolution
@@ -611,7 +970,7 @@ function BUDraftView({
               {/* Content sections */}
               <div className="space-y-3">
                 {reco.contentSections.map((section, idx) => {
-                  const stub = isStub(section.id)
+                  const stub = isStub(section.id) || (section.id === 's10' && section.body === RESOLUTION_STUB)
                   const typing_ = isTyping(section.id)
                   const hovered = isHovered(section.id)
                   // What to display: live typewriter text > store body
@@ -740,9 +1099,12 @@ function BUDraftView({
           )}
         </div>
 
-        {/* ── Right column: Agent + Assisted drafting ──────────────── */}
-        <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Drafting Agent</h2>
+        {/* ── Right pane: agents + tasks (scrolls independently) ───── */}
+        <div className="space-y-4 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Recommendation Assistant</h2>
+            <p className="text-[11px] text-slate-400 mt-0.5 normal-case">drafting specialist · orchestrated by Recopilot</p>
+          </div>
           <AgentPanel
             script={draftingAgentScript}
             inputs={{
@@ -837,16 +1199,63 @@ function BUDraftView({
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Step 3 · Resolution Assistant + Step 4 · Evidence Collection Assistant */}
+          <AnimatePresence>
+            {hasSections && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25 }}
+                className="space-y-4"
+              >
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Resolution Assistant</h2>
+                  <p className="text-[11px] text-slate-400 mt-0.5 normal-case">draft-resolution options · section 10</p>
+                </div>
+                <AgentPanel
+                  script={resolutionAssistantScript}
+                  onComplete={handleResolutionComplete}
+                  onSourceClick={setOpenPrecedentId}
+                />
+
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Evidence Collection Assistant</h2>
+                  <p className="text-[11px] text-slate-400 mt-0.5 normal-case">searches the document repository & attaches supporting evidence</p>
+                </div>
+                <AgentPanel
+                  script={evidenceCollectionAgentScript}
+                  onComplete={() => setEvidenceRun(true)}
+                  onSourceClick={setOpenPrecedentId}
+                />
+
+                {/* Repository search results — attach supporting documents */}
+                <AnimatePresence>
+                  {evidenceRun && (
+                    <EvidenceResultsPanel
+                      attached={new Set(reco.attachments ?? [])}
+                      requested={new Set(reco.evidenceRequests ?? [])}
+                      onAttach={(docId) => attachDocuments(recoId, [docId])}
+                      onAttachAll={() => attachDocuments(recoId, RECOMMENDED_DOC_IDS)}
+                      onDetach={(docId) => detachDocument(recoId, docId)}
+                      onRequest={(label) => requestEvidence(recoId, label)}
+                      onOpen={setOpenDocumentId}
+                    />
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Footer CTA */}
+      {/* Footer CTA (fixed) */}
       <AnimatePresence>
         {hasSections && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between pt-4 border-t border-border-subtle"
+            className="shrink-0 flex items-center justify-between pt-4 lg:mt-4 border-t border-border-subtle"
           >
             <div>
               <AnimatePresence mode="wait">
@@ -901,20 +1310,24 @@ function BUSendView({
   const sendDirectToChairman = useRecoStore((s) => s.sendDirectToChairman)
 
   const [selected, setSelected] = useState<Set<ReviewFunction>>(
-    new Set<ReviewFunction>(['legal', 'finance', 'compliance'])
+    new Set<ReviewFunction>(['legal', 'finance', 'compliance', 'chairman'])
   )
   const [directMode, setDirectMode] = useState(false)
   const [reason, setReason] = useState('')
 
   if (!reco) return null
 
-  const toggle = (fn: ReviewFunction) =>
+  const isMandatory = (fn: ReviewFunction) => FN_INFO.find((f) => f.fn === fn)?.mandatory ?? false
+
+  const toggle = (fn: ReviewFunction) => {
+    if (isMandatory(fn)) return // Chairman cannot be deselected
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(fn)) next.delete(fn)
       else next.add(fn)
       return next
     })
+  }
 
   const canSend = directMode ? reason.trim().length > 0 : selected.size > 0
 
@@ -942,15 +1355,43 @@ function BUSendView({
         <p className="text-slate-500 text-sm mt-1 line-clamp-1">{reco.title}</p>
       </div>
 
+      {!directMode && (
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Review Planning</h2>
+            <p className="text-[11px] text-slate-400 mt-0.5 normal-case">
+              approval timing & reviewer routing · orchestrated by Recopilot
+            </p>
+          </div>
+          <AgentPanel
+            script={reviewPlanningAgentScript}
+            inputs={{
+              board_meeting: reco.boardMeetingDate,
+              bod_deadline: reco.bodDeadline,
+              notional: '> EUR 10M (cross-border, multi-year)',
+            }}
+          />
+          <AgentPanel
+            script={reviewWorkflowAgentScript}
+            inputs={{
+              recommendation_type: 'Cross-border bilateral energy trading',
+              governance_rule: 'Group Authorisation Matrix · BoD threshold',
+            }}
+          />
+        </div>
+      )}
+
       <div className="bg-surface border border-border-subtle rounded-xl p-5 space-y-4">
         {!directMode ? (
           <>
-            <p className="text-sm font-medium text-slate-700">Select review functions</p>
+            <p className="text-sm font-medium text-slate-700">Select reviewers</p>
             <div className="space-y-2">
-              {FN_INFO.map(({ fn, label, description }) => (
+              {FN_INFO.map(({ fn, label, description, mandatory }) => (
                 <label
                   key={fn}
-                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                  className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
+                    mandatory ? 'cursor-default' : 'cursor-pointer'
+                  } ${
                     selected.has(fn)
                       ? 'border-brand/50 bg-brand-subtle'
                       : 'border-border-subtle hover:border-border-strong'
@@ -960,10 +1401,18 @@ function BUSendView({
                     type="checkbox"
                     checked={selected.has(fn)}
                     onChange={() => toggle(fn)}
-                    className="mt-0.5 accent-brand"
+                    disabled={mandatory}
+                    className="mt-0.5 accent-brand disabled:opacity-70"
                   />
                   <div>
-                    <p className="text-sm font-medium text-slate-700">{label}</p>
+                    <p className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                      {label}
+                      {mandatory && (
+                        <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-brand text-white leading-none">
+                          Mandatory
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-slate-500">{description}</p>
                   </div>
                 </label>
@@ -1007,7 +1456,7 @@ function BUSendView({
           <Send className="w-4 h-4" />
           {directMode
             ? 'Send to Chairman'
-            : `Send to ${selected.size} function${selected.size !== 1 ? 's' : ''}`}
+            : `Send to ${selected.size} reviewer${selected.size !== 1 ? 's' : ''}`}
         </button>
       </div>
     </div>
@@ -1034,11 +1483,11 @@ function BUFeedbackView({
 
   const isReturned = reco.status === 'Returned for Update'
   const allDone = reco.status === 'All Reviews Completed'
-  const isSubmitted = ['Submitted to Chairman', 'Ready for BoD', 'Submitted to BoD'].includes(
+  const isSubmitted = ['Submitted to Secretariat', 'Ready for BoD', 'Submitted to BoD'].includes(
     reco.status
   )
 
-  const activeReviews = (['legal', 'finance', 'compliance'] as ReviewFunction[]).filter(
+  const activeReviews = (['legal', 'finance', 'compliance', 'chairman'] as ReviewFunction[]).filter(
     (fn) => reco.reviews[fn].status !== 'Pending'
   )
 
@@ -1093,7 +1542,7 @@ function BUFeedbackView({
             </div>
           ) : (
             <div className="space-y-3">
-              {(['legal', 'finance', 'compliance'] as ReviewFunction[]).map((fn) => {
+              {(['legal', 'finance', 'compliance', 'chairman'] as ReviewFunction[]).map((fn) => {
                 const review = reco.reviews[fn]
                 if (review.status === 'Pending') return null
                 const cls = REVIEW_STATUS_CLS[review.status] ?? 'text-slate-500'
@@ -1153,7 +1602,7 @@ function BUFeedbackView({
                   }}
                   className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dim transition-colors inline-flex items-center gap-1.5"
                 >
-                  Submit to Chairman
+                  Submit to Secretariat
                   <ChevronRight className="w-4 h-4" />
                 </button>
               )}
@@ -1165,7 +1614,7 @@ function BUFeedbackView({
               <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-emerald-700">
-                  Submitted to Chairman
+                  Submitted to Secretariat
                 </p>
                 <p className="text-xs text-emerald-600 mt-0.5">
                   The Readiness Agent will assess completeness and prepare the BoD pack.
@@ -1511,7 +1960,9 @@ function BUUpdateView({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:space-y-0 lg:h-[calc(100vh-8rem)] lg:flex lg:flex-col">
+      {/* Top: back + title + returned context (fixed) */}
+      <div className="shrink-0 space-y-4 lg:pb-4">
       <button
         onClick={onBack}
         className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
@@ -1525,7 +1976,10 @@ function BUUpdateView({
           <h1 className="text-xl font-semibold text-slate-800">Review Legal Feedback</h1>
           <p className="text-slate-500 text-sm mt-1 line-clamp-1">{reco.title}</p>
         </div>
-        <StatusBadge status={reco.status} />
+        <div className="flex items-center gap-3 shrink-0">
+          <SaveControl />
+          <StatusBadge status={reco.status} />
+        </div>
       </div>
 
       {/* Returned comment (collapsible context) */}
@@ -1549,10 +2003,11 @@ function BUUpdateView({
           </button>
         </div>
       )}
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ── Document ────────────────────────────────────────────── */}
-        <div className="lg:col-span-2 space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:flex-1 lg:min-h-0">
+        {/* ── Document (left pane, scrolls independently) ──────────── */}
+        <div className="lg:col-span-2 space-y-3 lg:overflow-y-auto lg:min-h-0 lg:pr-2">
           {/* Formal header block */}
           {reco.contentSections.length > 0 && (
             <div className="bg-surface-raised border border-border-strong rounded-xl p-4">
@@ -1724,9 +2179,12 @@ function BUUpdateView({
           )}
         </div>
 
-        {/* ── Right column: Legal Comments ─────────────────────────── */}
-        <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Legal Feedback</h2>
+        {/* ── Right pane: Feedback Co-Pilot (scrolls independently) ── */}
+        <div className="space-y-4 lg:overflow-y-auto lg:min-h-0 lg:pr-1">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Legal Feedback</h2>
+            <p className="text-[11px] text-slate-400 mt-0.5 normal-case">consolidated by the Feedback Co-Pilot · orchestrated by Recopilot</p>
+          </div>
 
           <div className="border border-border-subtle rounded-xl overflow-hidden bg-surface">
             <div className="px-4 py-3 bg-surface-raised border-b border-border-subtle flex items-center gap-2">

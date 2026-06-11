@@ -3,11 +3,12 @@ export type RecommendationStatus =
   | 'Under Review'
   | 'Returned for Update'
   | 'All Reviews Completed'
-  | 'Submitted to Chairman'
+  | 'Submitted to Secretariat'
   | 'Ready for BoD'
   | 'Submitted to BoD'
 
-export type ReviewFunction = 'legal' | 'finance' | 'compliance'
+// Reviewing Functions / Chairman lane. Chairman is a MANDATORY reviewer (official map, step 6/8).
+export type ReviewFunction = 'legal' | 'finance' | 'compliance' | 'chairman'
 
 export type ReviewStatus = 'Pending' | 'In Review' | 'Approved' | 'Returned'
 
@@ -66,9 +67,15 @@ export interface Recommendation {
     legal: ReviewState
     finance: ReviewState
     compliance: ReviewState
+    chairman: ReviewState
   }
   readinessScore: number
   bodPackItems?: string[]
+  // Attached supporting documents (ids into the document repository) — collected by the
+  // Evidence Collection Assistant.
+  attachments?: string[]
+  // Missing-evidence items the owner has actioned ("requested") — by label.
+  evidenceRequests?: string[]
   directToChairman?: DirectToChairman
   auditLog: AuditEntry[]
 }

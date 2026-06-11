@@ -1,17 +1,17 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ChevronLeft, ChevronRight, Users, Scale, Crown } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Users, Scale, Landmark, BookOpen } from 'lucide-react'
 import { useUIStore, DEMO_STEPS, type Persona } from '@/store/uiStore'
 
 const PERSONA_ICONS: Record<Persona, React.ElementType> = {
   bu: Users,
   review: Scale,
-  secretariat: Crown,
+  secretariat: Landmark,
 }
 
 const PERSONA_LABELS: Record<Persona, string> = {
   bu: 'Recommendation Owner',
   review: 'Reviewers',
-  secretariat: 'Chairman',
+  secretariat: 'Corporate Secretariat',
 }
 
 export default function DemoGuide() {
@@ -23,19 +23,34 @@ export default function DemoGuide() {
   const total = DEMO_STEPS.length
 
   return (
-    <AnimatePresence>
-      {demoGuideOpen && (
+    <AnimatePresence mode="wait">
+      {!demoGuideOpen ? (
+        <motion.button
+          key="guide-fab"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+          onClick={() => setDemoGuideOpen(true)}
+          title="Open Guide"
+          className="fixed left-4 bottom-4 z-30 inline-flex items-center gap-2 bg-surface border border-border-subtle rounded-full shadow-lg px-3.5 py-2 text-xs font-medium text-slate-600 hover:text-brand hover:border-brand/40 transition-colors"
+        >
+          <BookOpen className="w-4 h-4 text-brand" />
+          Guide
+        </motion.button>
+      ) : (
         <motion.aside
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ type: 'spring', damping: 32, stiffness: 320 }}
-          className="fixed right-0 top-16 bottom-0 w-72 bg-surface border-l border-border-subtle shadow-xl z-30 flex flex-col"
+          key="guide-panel"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ type: 'spring', damping: 30, stiffness: 320 }}
+          className="fixed left-4 bottom-4 w-72 max-h-[70vh] bg-surface border border-border-subtle rounded-xl shadow-lg z-30 flex flex-col overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Demo Guide</p>
+              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Guide</p>
               <p className="text-xs text-slate-500 mt-0.5">
                 Step {demoStep + 1} of {total}
               </p>
