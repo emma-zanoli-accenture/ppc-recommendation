@@ -454,6 +454,8 @@ function RFDashboard({
   onView: (id: string) => void
 }) {
   const [showCompleted, setShowCompleted] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Approved' | 'Returned'>('All')
+  const [buFilter, setBuFilter] = useState('All BUs')
 
   const fnCfg = FN_CONFIG[activeFn]
   const Icon = fnCfg.icon
@@ -465,6 +467,19 @@ function RFDashboard({
   const completedItems = recommendations.filter((r) => {
     const s = r.reviews[activeFn].status
     return s !== 'Pending' && s !== 'In Review'
+  })
+
+  const buValues = [
+    'All BUs',
+    ...Array.from(new Set(completedItems.map((r) => r.businessUnit))).sort(),
+  ]
+  const approvedCount = completedItems.filter((r) => r.reviews[activeFn].status === 'Approved').length
+  const returnedCount = completedItems.filter((r) => r.reviews[activeFn].status === 'Returned').length
+
+  const filteredCompleted = completedItems.filter((r) => {
+    const statusOk = statusFilter === 'All' || r.reviews[activeFn].status === statusFilter
+    const buOk = buFilter === 'All BUs' || r.businessUnit === buFilter
+    return statusOk && buOk
   })
 
   const newestId = getNewestId(actionItems)
@@ -539,26 +554,86 @@ function RFDashboard({
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
-                  {completedItems.map((r, i) => {
-                    const reviewStatus = r.reviews[activeFn].status
-                    return (
-                      <div key={r.id} className="relative">
-                        <RecoCard
-                          recommendation={r}
-                          onClick={() => onView(r.id)}
-                          index={i}
-                        />
-                        <span className={`absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full border pointer-events-none ${
-                          reviewStatus === 'Approved'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border-amber-200'
-                        }`}>
-                          {reviewStatus === 'Approved' ? '✓ Reviewed' : '↩ Returned'}
+                <div className="space-y-4 pt-1">
+                  {/* Filters */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] uppercase tracking-widest text-slate-400 font-medium w-12 shrink-0">
+                        Status:
+                      </span>
+                      {(
+                        [
+                          { label: 'All', value: 'All', count: completedItems.length },
+                          { label: 'Approved', value: 'Approved', count: approvedCount },
+                          { label: 'Returned', value: 'Returned', count: returnedCount },
+                        ] as const
+                      ).map(({ label, value, count }) => (
+                        <button
+                          key={value}
+                          onClick={() => setStatusFilter(value)}
+                          className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors border ${
+                            statusFilter === value
+                              ? 'bg-brand text-white border-brand'
+                              : 'bg-surface-raised text-slate-500 border-border-subtle hover:border-brand/50 hover:text-brand'
+                          }`}
+                        >
+                          {label} ({count})
+                        </button>
+                      ))}
+                    </div>
+
+                    {buValues.length > 2 && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] uppercase tracking-widest text-slate-400 font-medium w-12 shrink-0">
+                          BU:
                         </span>
+                        {buValues.map((bu) => (
+                          <button
+                            key={bu}
+                            onClick={() => setBuFilter(bu)}
+                            className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors border ${
+                              buFilter === bu
+                                ? 'bg-brand text-white border-brand'
+                                : 'bg-surface-raised text-slate-500 border-border-subtle hover:border-brand/50 hover:text-brand'
+                            }`}
+                          >
+                            {bu}
+                          </button>
+                        ))}
                       </div>
-                    )
-                  })}
+                    )}
+                  </div>
+
+                  {/* Grid */}
+                  {filteredCompleted.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">
+                      No items match the selected filters.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {filteredCompleted.map((r, i) => {
+                        const reviewStatus = r.reviews[activeFn].status
+                        return (
+                          <div key={r.id} className="relative">
+                            <RecoCard
+                              recommendation={r}
+                              onClick={() => onView(r.id)}
+                              index={i}
+                            />
+                            <span
+                              className={`absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full border pointer-events-none ${
+                                reviewStatus === 'Approved'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}
+                            >
+                              {reviewStatus === 'Approved' ? '✓ Reviewed' : '↩ Returned'}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
