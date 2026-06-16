@@ -467,7 +467,6 @@ function SuggestionCard({
   onHoverStart: () => void
   onHoverEnd: () => void
 }) {
-  const isSuggestion = item.type === 'suggestion'
   const sectionTitle = SECTION_TITLE_MAP.get(item.targetSectionId)
   return (
     <motion.div
@@ -477,18 +476,14 @@ function SuggestionCard({
       className={`flex items-start gap-2.5 p-3 rounded-lg border transition-all ${
         applied
           ? 'bg-surface-raised border-border-subtle opacity-60'
-          : isSuggestion
-          ? 'bg-agent-subtle/40 border-agent-dim/30'
-          : 'bg-amber-50 border-amber-200'
+          : 'bg-agent-subtle/40 border-agent-dim/30'
       }`}
     >
-      <div className={`mt-0.5 flex-shrink-0 ${isSuggestion ? 'text-agent' : 'text-amber-500'}`}>
-        {isSuggestion ? <Bot className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+      <div className="mt-0.5 flex-shrink-0 text-agent">
+        <Bot className="w-3.5 h-3.5" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`text-xs font-medium leading-snug ${
-          applied ? 'text-slate-400' : isSuggestion ? 'text-agent' : 'text-amber-700'
-        }`}>
+        <p className={`text-xs font-medium leading-snug ${applied ? 'text-slate-400' : 'text-agent'}`}>
           {item.label}
         </p>
         {sectionTitle && !applied && (
@@ -506,11 +501,7 @@ function SuggestionCard({
           onClick={onApply}
           onMouseEnter={onHoverStart}
           onMouseLeave={onHoverEnd}
-          className={`text-[10px] font-bold px-2.5 py-1 rounded-md transition-colors shrink-0 ${
-            isSuggestion
-              ? 'bg-agent text-white hover:bg-agent-dim'
-              : 'bg-amber-500 text-white hover:bg-amber-600'
-          }`}
+          className="text-[10px] font-bold px-2.5 py-1 rounded-md transition-colors shrink-0 bg-agent text-white hover:bg-agent-dim"
         >
           Apply
         </button>
@@ -1152,29 +1143,9 @@ function BUDraftView({
                     </p>
                   </div>
 
-                  {/* Suggested integrations */}
+                  {/* Draft suggestions */}
                   <div className="space-y-2">
-                    <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
-                      Suggested integrations
-                    </p>
-                    {SCRIPT_OUTPUT.suggestions.map((item) => (
-                      <SuggestionCard
-                        key={item.id}
-                        item={item}
-                        applied={appliedIds.has(item.id)}
-                        onApply={() => applyItem(item)}
-                        onHoverStart={() => setHoverSectionId(item.targetSectionId)}
-                        onHoverEnd={() => setHoverSectionId(null)}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Information gaps */}
-                  <div className="space-y-2">
-                    <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
-                      Information gaps
-                    </p>
-                    {SCRIPT_OUTPUT.gaps.map((item) => (
+                    {ALL_DRAFT_ITEMS.map((item) => (
                       <SuggestionCard
                         key={item.id}
                         item={item}

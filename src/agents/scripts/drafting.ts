@@ -197,11 +197,11 @@ export const draftingAgentScript: AgentScript = {
     'Adding RAAEY prior notification requirement (L.4001/2011 Art. 11)',
     'Scaffolding the draft-resolution section (10) — handed off to the Resolution Assistant',
     'Inserting signature skeleton — 8 slots across 5 tiers (incl. mandatory Chairman), populates as approvals are collected',
-    'Running gap analysis — sections 6, 7, 8 require completion',
+    'Identifying sections requiring completion — sections 6, 7, 8',
   ],
-  result: `Template scaffolded across 11 sections (PPC εισήγηση format). Sections 1–5 and 9–11 are fully drafted. Sections 6, 7, and 8 require completion via the assisted-drafting items below.
+  result: `Template scaffolded across 11 sections (PPC εισήγηση format). Sections 1–5 and 9–11 are fully drafted. Sections 6, 7, and 8 require completion.
 
-3 suggested integrations identified: full regulatory framework with REMIT/EMIR/RAAEY/MiFID II (→ sec. 2), implementation milestones Q3 2026–mid-2027 (→ sec. 6), and 4-risk framework with mitigants (→ sec. 3). 2 information gaps detected: budget/OPEX/cost centre missing from Finance/Treasury (→ sec. 7), counterparty KYC and authorizations pending (→ sec. 8).
+5 drafting suggestions ready: full regulatory framework with REMIT/EMIR/RAAEY/MiFID II (→ sec. 2), implementation milestones Q3 2026–mid-2027 (→ sec. 6), 4-risk framework with mitigants (→ sec. 3), budget and cost centre details (→ sec. 7), and counterparty KYC & authorizations (→ sec. 8).
 
 The draft-resolution section (sec. 10) has been scaffolded with structural headers only — the operative resolution is intentionally left blank and is handed off to the Resolution Assistant, which proposes resolution options and inserts the recommended wording with its conditions precedent. Signature block (sec. 11) scaffolded — 8 pending slots across 5 tiers (incl. mandatory Chairman); slots fill progressively as each function and the Chairman approves.
 
