@@ -36,6 +36,7 @@ import {
   evidenceCollectionAgentScript,
   reviewPlanningAgentScript,
   reviewWorkflowAgentScript,
+  complianceReviewAgentScript,
 } from '@/agents/scripts'
 import { statusColors } from '@/lib/statusColors'
 import type { ReviewFunction, Recommendation, RecommendationStatus } from '@/lib/types'
@@ -1243,6 +1244,18 @@ function BUDraftView({
                     />
                   )}
                 </AnimatePresence>
+
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Compliance Review Agent</h2>
+                  <p className="text-[11px] text-slate-400 mt-0.5 normal-case">policy alignment · governance & AML screening · self-check before submission</p>
+                </div>
+                <AgentPanel
+                  script={complianceReviewAgentScript}
+                  inputs={{
+                    document_title: reco.title,
+                    regulatory_refs: reco.regulatoryRefs.join(', ') || 'none',
+                  }}
+                />
               </motion.div>
             )}
           </AnimatePresence>
