@@ -53,9 +53,27 @@ function blankReviews() {
   }
 }
 
+// All four reviewers — including the chairman — must have approved.
 function checkAllReviewsDone(reviews: Recommendation['reviews']): boolean {
-  const active = Object.values(reviews).filter((r) => r.status !== 'Pending')
-  return active.length > 0 && active.every((r) => r.status === 'Approved')
+  return (
+    reviews.legal.status === 'Approved' &&
+    reviews.finance.status === 'Approved' &&
+    reviews.compliance.status === 'Approved' &&
+    reviews.chairman.status === 'Approved'
+  )
+}
+
+// Unlock the chairman gate once all three specialist functions have approved.
+function maybeUnlockChairman(reviews: Recommendation['reviews']): Recommendation['reviews'] {
+  if (
+    reviews.legal.status === 'Approved' &&
+    reviews.finance.status === 'Approved' &&
+    reviews.compliance.status === 'Approved' &&
+    reviews.chairman.status === 'Pending'
+  ) {
+    return { ...reviews, chairman: { ...reviews.chairman, status: 'In Review' } }
+  }
+  return reviews
 }
 
 export interface RecoStore {
@@ -100,10 +118,8 @@ export interface RecoStore {
   // BU re-submits after addressing review feedback
   resubmitForReview: (id: string) => void
 
-  // BU accepts all legal feedback changes → directly "All Reviews Completed"
+  // BU accepts all legal feedback changes → auto-approves all three functions and unlocks Chairman
   acceptFeedbackChanges: (id: string) => void
-
-  approveDirectSubmission: (id: string) => void
 
   submitToSecretariat: (id: string) => void
 
@@ -227,7 +243,9 @@ export const useRecoStore = create<RecoStore>((set, get) => {
         id,
         (r) => {
           const reviews = { ...r.reviews }
-          functions.forEach((fn) => {
+          // Chairman is unlocked automatically after the three specialists approve.
+          const specialists = functions.filter((fn) => fn !== 'chairman')
+          specialists.forEach((fn) => {
             reviews[fn] = { ...reviews[fn], status: 'In Review' }
           })
           return { ...r, status: 'Under Review', reviews }
@@ -237,7 +255,7 @@ export const useRecoStore = create<RecoStore>((set, get) => {
           actor: get().getById(id)?.owner ?? 'Unknown',
           role: get().getById(id)?.businessUnit ?? '',
           action: 'Sent for review',
-          detail: `Sent to: ${functions.join(', ')}`,
+          detail: `Sent to: ${functions.filter((fn) => fn !== 'chairman').join(', ')} · Chairman review follows after specialist approvals`,
         }
       )
     },
@@ -247,7 +265,8 @@ export const useRecoStore = create<RecoStore>((set, get) => {
         id,
         (r) => ({
           ...r,
-          status: 'Submitted to Secretariat',
+          status: 'Under Review',
+          reviews: { ...r.reviews, chairman: { ...r.reviews.chairman, status: 'In Review' } },
           directToChairman: { reason, sentAt: now() },
         }),
         {
@@ -277,10 +296,12 @@ export const useRecoStore = create<RecoStore>((set, get) => {
       update(
         id,
         (r) => {
-          const reviews = {
+          let reviews = {
             ...r.reviews,
             [fn]: { ...r.reviews[fn], status: 'Approved' as const, reviewer, reviewedAt: now() },
           }
+          // After each specialist approval, check if the chairman gate can be unlocked.
+          reviews = maybeUnlockChairman(reviews)
           const newStatus = checkAllReviewsDone(reviews) ? 'All Reviews Completed' as const : r.status
           return { ...r, reviews, status: newStatus }
         },
@@ -296,10 +317,8 @@ export const useRecoStore = create<RecoStore>((set, get) => {
     returnForUpdate: (id, fn, reviewer, reason) => {
       update(
         id,
-        (r) => ({
-          ...r,
-          status: 'Returned for Update',
-          reviews: {
+        (r) => {
+          let reviews = {
             ...r.reviews,
             [fn]: {
               ...r.reviews[fn],
@@ -310,8 +329,13 @@ export const useRecoStore = create<RecoStore>((set, get) => {
                 { id: uid(), author: reviewer, role: fn, text: reason, createdAt: now() },
               ],
             },
-          },
-        }),
+          }
+          // If a specialist function returns, re-lock the chairman gate.
+          if (fn !== 'chairman' && reviews.chairman.status === 'In Review') {
+            reviews = { ...reviews, chairman: { ...reviews.chairman, status: 'Pending' } }
+          }
+          return { ...r, status: 'Returned for Update', reviews }
+        },
         {
           timestamp: now(),
           actor: reviewer,
@@ -326,12 +350,15 @@ export const useRecoStore = create<RecoStore>((set, get) => {
       update(
         id,
         (r) => {
-          const reviews = { ...r.reviews }
+          let reviews = { ...r.reviews }
           ;(Object.keys(reviews) as ReviewFunction[]).forEach((fn) => {
             if (reviews[fn].status === 'Returned') {
-              reviews[fn] = { ...reviews[fn], status: 'In Review' }
+              // Chairman resets to Pending; specialists reset to In Review.
+              reviews[fn] = { ...reviews[fn], status: fn === 'chairman' ? 'Pending' : 'In Review' }
             }
           })
+          // Re-check: if all specialists are still Approved, re-unlock chairman immediately.
+          reviews = maybeUnlockChairman(reviews)
           return { ...r, status: 'Under Review', reviews }
         },
         {
@@ -346,38 +373,27 @@ export const useRecoStore = create<RecoStore>((set, get) => {
     acceptFeedbackChanges: (id) => {
       update(
         id,
-        (r) => ({
-          ...r,
-          status: 'All Reviews Completed' as const,
-          reviews: {
+        (r) => {
+          // Auto-approve all three specialist functions (demo shortcut).
+          const reviews = {
             ...r.reviews,
             legal: { ...r.reviews.legal, status: 'Approved' as const },
-          },
-        }),
+            finance: ['Pending', 'In Review', 'Returned'].includes(r.reviews.finance.status)
+              ? { ...r.reviews.finance, status: 'Approved' as const }
+              : r.reviews.finance,
+            compliance: ['Pending', 'In Review', 'Returned'].includes(r.reviews.compliance.status)
+              ? { ...r.reviews.compliance, status: 'Approved' as const }
+              : r.reviews.compliance,
+          }
+          // Now that all three are Approved, unlock the chairman gate.
+          const finalReviews = maybeUnlockChairman(reviews)
+          return { ...r, status: 'Under Review', reviews: finalReviews }
+        },
         {
           timestamp: now(),
           actor: get().getById(id)?.owner ?? 'Unknown',
           role: get().getById(id)?.businessUnit ?? '',
           action: 'Legal feedback integrated — version accepted',
-        }
-      )
-    },
-
-    approveDirectSubmission: (id) => {
-      update(
-        id,
-        (r) => ({
-          ...r,
-          directToChairman: r.directToChairman
-            ? { ...r.directToChairman, chairmanApproved: true, approvedAt: now() }
-            : r.directToChairman,
-        }),
-        {
-          timestamp: now(),
-          actor: 'Chairman',
-          role: 'Chairman',
-          action: 'Direct submission authorised',
-          detail: 'Reason for bypassing standard reviews accepted',
         }
       )
     },
