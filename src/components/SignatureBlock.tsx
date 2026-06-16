@@ -47,7 +47,7 @@ export const SIG_TIERS: SigTier[] = [
         id: 'h1',
         role: 'Director, Trading & Origination',
         getName: (r) => r.owner,
-        signed: (r) => BEYOND_REVIEW.has(r.status) || !!r.directToChairman,
+        signed: (r) => BEYOND_REVIEW.has(r.status),
         bypassed: () => false,
         chairmanBypassed: () => false,
         getTs: (r) =>
@@ -66,9 +66,9 @@ export const SIG_TIERS: SigTier[] = [
         getName: (r) => r.reviews.legal.reviewer ?? null,
         signed: (r) => r.reviews.legal.status.startsWith('Approved'),
         bypassed: (r) =>
-          !!r.directToChairman && !r.directToChairman.chairmanApproved && !r.reviews.legal.status.startsWith('Approved'),
+          !!r.directToChairman && r.reviews.chairman.status !== 'Approved' && !r.reviews.legal.status.startsWith('Approved'),
         chairmanBypassed: (r) =>
-          !!r.directToChairman?.chairmanApproved && !r.reviews.legal.status.startsWith('Approved'),
+          !!r.directToChairman && r.reviews.chairman.status === 'Approved' && !r.reviews.legal.status.startsWith('Approved'),
         getTs: (r) =>
           r.reviews.legal.reviewedAt ??
           auditTs(r, 'Legal review approved') ??
@@ -80,9 +80,9 @@ export const SIG_TIERS: SigTier[] = [
         getName: (r) => r.reviews.finance.reviewer ?? null,
         signed: (r) => r.reviews.finance.status.startsWith('Approved'),
         bypassed: (r) =>
-          !!r.directToChairman && !r.directToChairman.chairmanApproved && !r.reviews.finance.status.startsWith('Approved'),
+          !!r.directToChairman && r.reviews.chairman.status !== 'Approved' && !r.reviews.finance.status.startsWith('Approved'),
         chairmanBypassed: (r) =>
-          !!r.directToChairman?.chairmanApproved && !r.reviews.finance.status.startsWith('Approved'),
+          !!r.directToChairman && r.reviews.chairman.status === 'Approved' && !r.reviews.finance.status.startsWith('Approved'),
         getTs: (r) => r.reviews.finance.reviewedAt ?? auditTs(r, 'Finance review approved'),
       },
       {
@@ -91,9 +91,9 @@ export const SIG_TIERS: SigTier[] = [
         getName: (r) => r.reviews.compliance.reviewer ?? null,
         signed: (r) => r.reviews.compliance.status.startsWith('Approved'),
         bypassed: (r) =>
-          !!r.directToChairman && !r.directToChairman.chairmanApproved && !r.reviews.compliance.status.startsWith('Approved'),
+          !!r.directToChairman && r.reviews.chairman.status !== 'Approved' && !r.reviews.compliance.status.startsWith('Approved'),
         chairmanBypassed: (r) =>
-          !!r.directToChairman?.chairmanApproved && !r.reviews.compliance.status.startsWith('Approved'),
+          !!r.directToChairman && r.reviews.chairman.status === 'Approved' && !r.reviews.compliance.status.startsWith('Approved'),
         getTs: (r) =>
           r.reviews.compliance.reviewedAt ?? auditTs(r, 'Compliance review approved'),
       },
@@ -106,15 +106,13 @@ export const SIG_TIERS: SigTier[] = [
       {
         id: 'chairman',
         role: 'Chairman of the Board',
-        getName: (r) => r.reviews.chairman.reviewer ?? (r.directToChairman?.chairmanApproved ? 'P. Georgiou' : null),
-        signed: (r) =>
-          r.reviews.chairman.status.startsWith('Approved') || !!r.directToChairman?.chairmanApproved,
+        getName: (r) => r.reviews.chairman.reviewer ?? null,
+        signed: (r) => r.reviews.chairman.status === 'Approved',
         bypassed: () => false,
         chairmanBypassed: () => false,
         getTs: (r) =>
           r.reviews.chairman.reviewedAt ??
-          auditTs(r, 'Chairman review approved') ??
-          r.directToChairman?.approvedAt,
+          auditTs(r, 'Chairman review approved'),
       },
     ],
   },
@@ -165,7 +163,7 @@ export default function SignatureBlock({ reco }: { reco: Recommendation }) {
   const signedCount = allSlots.filter((s) => s.signed(reco)).length
   const total = allSlots.length
 
-  const chairmanApprovedAt = reco.directToChairman?.approvedAt
+  const chairmanApprovedAt = reco.reviews.chairman.reviewedAt
 
   return (
     <div className="space-y-3">

@@ -527,7 +527,9 @@ function RFDashboard({
           <div className="bg-surface border border-border-subtle rounded-xl p-6 text-center">
             <CheckCircle2 className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
             <p className="text-sm text-slate-500">
-              Queue is clear — no items awaiting your review.
+              {activeFn === 'chairman'
+                ? 'Chairman review is unlocked after Legal, Finance and Compliance all approve. Nothing to review yet.'
+                : 'Queue is clear — no items awaiting your review.'}
             </p>
           </div>
         ) : (
@@ -1033,6 +1035,8 @@ function RFReviewView({
                   placeholder={
                     agentOutput
                       ? 'Findings pre-filled from agent analysis. Edit as needed…'
+                      : activeFn === 'chairman'
+                      ? 'Enter governance observations or sign-off notes…'
                       : 'Run the agent above for AI-assisted analysis, or enter findings manually…'
                   }
                   className="w-full border border-border-strong rounded-lg px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand bg-ink resize-none leading-relaxed"

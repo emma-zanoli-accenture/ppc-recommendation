@@ -71,7 +71,7 @@ const FN_INFO: { fn: ReviewFunction; label: string; description: string; mandato
   { fn: 'legal', label: 'Legal', description: 'Regulatory review — REMIT, EMIR, RAAEY, MiFID II' },
   { fn: 'finance', label: 'Finance', description: 'Financial impact, budget coverage, FX risk' },
   { fn: 'compliance', label: 'Compliance', description: 'Internal policy and governance alignment' },
-  { fn: 'chairman', label: 'Chairman', description: 'Mandatory governance sign-off — cross-border arrangements > EUR 10M', mandatory: true },
+  { fn: 'chairman', label: 'Chairman', description: 'Mandatory final sign-off — unlocked automatically after Legal, Finance and Compliance approve', mandatory: true },
 ]
 
 const FN_LABELS: Record<ReviewFunction, string> = {
@@ -1469,7 +1469,10 @@ function BUSendView({
           <Send className="w-4 h-4" />
           {directMode
             ? 'Send to Chairman'
-            : `Send to ${selected.size} reviewer${selected.size !== 1 ? 's' : ''}`}
+            : (() => {
+                const n = [...selected].filter((f) => f !== 'chairman').length
+                return `Send to ${n} reviewer${n !== 1 ? 's' : ''} · Chairman signs off last`
+              })()}
         </button>
       </div>
     </div>

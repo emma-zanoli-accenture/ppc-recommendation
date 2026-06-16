@@ -337,7 +337,7 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
         doc.text(sigSummary, ML + 8, y)
         y += 6
 
-        const chairmanApprovedAt = reco.directToChairman?.approvedAt
+        const chairmanApprovedAt = reco.reviews.chairman.reviewedAt
 
         for (const tier of SIG_TIERS) {
           needY(8)
@@ -435,26 +435,26 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
 
   if (reco.directToChairman) {
     const rowH = 11
-    const authorised = !!reco.directToChairman.chairmanApproved
+    const chairmanApproved = reco.reviews.chairman.status === 'Approved'
     needY(rowH + 3)
-    doc.setFillColor(...(authorised ? [236, 253, 243] as [n,n,n] : [255, 251, 235] as [n,n,n]))
-    doc.setDrawColor(...(authorised ? GREEN : AMBER))
+    doc.setFillColor(...(chairmanApproved ? [236, 253, 243] as [n,n,n] : [255, 251, 235] as [n,n,n]))
+    doc.setDrawColor(...(chairmanApproved ? GREEN : AMBER))
     doc.setLineWidth(0.2)
     doc.roundedRect(ML, y - rowH + 3, CW, rowH, 1.2, 1.2, 'FD')
-    doc.setFillColor(...(authorised ? GREEN : AMBER))
+    doc.setFillColor(...(chairmanApproved ? GREEN : AMBER))
     doc.rect(ML, y - rowH + 3, 2.5, rowH, 'F')
     const rowMid = y - rowH + 3 + rowH / 2 + 1
     doc.setFontSize(8.5)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...(authorised ? GREEN : AMBER))
+    doc.setTextColor(...(chairmanApproved ? GREEN : AMBER))
     doc.text(
-      authorised ? 'Direct submission authorised by Chairman' : 'Direct submission — standard reviews bypassed',
+      chairmanApproved ? 'Direct submission — Chairman approved' : 'Direct submission — Chairman review in progress',
       ML + 6, rowMid
     )
-    if (authorised && reco.directToChairman.approvedAt) {
+    if (chairmanApproved && reco.reviews.chairman.reviewedAt) {
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(...MED)
-      doc.text(san(new Date(reco.directToChairman.approvedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })), W - MR - 2, rowMid, { align: 'right' })
+      doc.text(san(new Date(reco.reviews.chairman.reviewedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })), W - MR - 2, rowMid, { align: 'right' })
     }
     y += rowH + 2.5
   } else {
@@ -592,7 +592,7 @@ function generateBodPackPDF(reco: Recommendation, packItems: string[]) {
 // ─── Completeness checklist ───────────────────────────────────────────────────
 
 function CompletenessChecklist({ reco }: { reco: Recommendation }) {
-  const directApproved = !!reco.directToChairman?.chairmanApproved
+  const isDirectPath = !!reco.directToChairman
 
   const checks = [
     {
@@ -602,13 +602,16 @@ function CompletenessChecklist({ reco }: { reco: Recommendation }) {
         : reco.contentSections.length > 0,
     },
     { label: 'Draft resolution present', pass: reco.draftResolution.length > 0 },
-    ...(directApproved
-      ? [{ label: 'Direct submission authorised by Chairman', pass: true }]
+    ...(isDirectPath
+      ? [
+          { label: 'Direct submission to Chairman — reason on record', pass: true },
+          { label: 'Chairman sign-off (mandatory)', pass: reco.reviews.chairman.status === 'Approved' },
+        ]
       : [
           { label: 'Legal review approved', pass: reco.reviews.legal.status.startsWith('Approved') },
           { label: 'Finance review approved', pass: reco.reviews.finance.status.startsWith('Approved') },
           { label: 'Compliance review approved', pass: reco.reviews.compliance.status.startsWith('Approved') },
-          { label: 'Chairman sign-off (mandatory)', pass: reco.reviews.chairman.status.startsWith('Approved') },
+          { label: 'Chairman sign-off (mandatory)', pass: reco.reviews.chairman.status === 'Approved' },
         ]
     ),
     { label: 'Regulatory references attached', pass: reco.regulatoryRefs.length > 0 },
@@ -868,18 +871,18 @@ function ChairmanModal({
 
           {/* Review status */}
           {reco.directToChairman ? (
-            reco.directToChairman.chairmanApproved ? (
+            reco.reviews.chairman.status === 'Approved' ? (
               <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                 <p className="text-xs font-medium text-emerald-700">
-                  Direct submission authorised by Chairman — standard reviews bypassed
+                  Direct submission — Chairman approved
                 </p>
               </div>
             ) : (
               <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
                 <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
                 <p className="text-xs font-medium text-amber-700">
-                  Direct submission — standard reviews bypassed, authorisation pending
+                  Direct submission — Chairman review in progress
                 </p>
               </div>
             )
@@ -1166,7 +1169,6 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
   const updateReadinessScore = useRecoStore((s) => s.updateReadinessScore)
   const generateBoDPack = useRecoStore((s) => s.generateBoDPack)
   const submitToBoD = useRecoStore((s) => s.submitToBoD)
-  const approveDirectSubmission = useRecoStore((s) => s.approveDirectSubmission)
   const setOpenPrecedentId = useUIStore((s) => s.setOpenPrecedentId)
 
   const [agentOutput, setAgentOutput] = useState<ReadinessOutput | null>(null)
@@ -1279,50 +1281,28 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
       )}
 
       {reco.directToChairman && (
-        reco.directToChairman.chairmanApproved ? (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
+        <div className={`rounded-xl p-4 flex items-start gap-3 ${
+          reco.reviews.chairman.status === 'Approved'
+            ? 'bg-emerald-50 border border-emerald-200'
+            : 'bg-amber-50 border border-amber-200'
+        }`}>
+          {reco.reviews.chairman.status === 'Approved' ? (
             <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-emerald-700">Direct submission authorised by Chairman</p>
-              <p className="text-xs text-emerald-600 mt-1 leading-relaxed">
-                <span className="font-medium">Stated reason:</span> {reco.directToChairman.reason}
-              </p>
-              <p className="text-xs text-emerald-500 mt-1">
-                Standard review functions bypassed. Completeness check updated accordingly.
-              </p>
-            </div>
+          ) : (
+            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          )}
+          <div>
+            <p className={`text-sm font-semibold ${reco.reviews.chairman.status === 'Approved' ? 'text-emerald-700' : 'text-amber-800'}`}>
+              {reco.reviews.chairman.status === 'Approved'
+                ? 'Direct submission — Chairman approved'
+                : 'Direct submission — Chairman review in progress'}
+            </p>
+            <p className={`text-xs mt-1 leading-relaxed ${reco.reviews.chairman.status === 'Approved' ? 'text-emerald-600' : 'text-amber-700'}`}>
+              Specialist review functions were bypassed.{' '}
+              <span className="font-medium">Reason:</span> {reco.directToChairman.reason}
+            </p>
           </div>
-        ) : (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-amber-800">Direct submission — Chairman review required</p>
-                <p className="text-xs text-amber-700 mt-1 leading-relaxed">
-                  This recommendation bypassed the standard Legal, Finance and Compliance review functions.
-                  The submitter provided the following reason:
-                </p>
-                <blockquote className="mt-2 pl-3 border-l-2 border-amber-300 text-sm text-amber-900 italic">
-                  "{reco.directToChairman.reason}"
-                </blockquote>
-                <p className="text-xs text-amber-600 mt-2">
-                  If you deem the reason appropriate, authorise the direct submission to update the completeness check.
-                </p>
-              </div>
-            </div>
-            {!isSubmitted && (
-              <div className="mt-3 flex justify-end">
-                <button
-                  onClick={() => approveDirectSubmission(recoId)}
-                  className="flex items-center gap-2 text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  Authorise direct submission
-                </button>
-              </div>
-            )}
-          </div>
-        )
+        </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1569,12 +1549,23 @@ function SecDetailView({ recoId, onBack }: { recoId: string; onBack: () => void 
             <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">
               Review Approvals · Approval Tracking Assistant
             </p>
-            {reco.directToChairman?.chairmanApproved ? (
-              <div className="flex items-center gap-2 py-1">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span className="text-xs text-emerald-700 font-medium">
-                  Authorised by Chairman — standard reviews bypassed
-                </span>
+            {reco.directToChairman ? (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 py-1">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                  <span className="text-xs text-amber-700">Direct path — specialist reviews bypassed</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-600">Chairman</span>
+                  <div className={`flex items-center gap-1 text-xs font-medium ${reco.reviews.chairman.status === 'Approved' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {reco.reviews.chairman.status === 'Approved' ? (
+                      <CheckCircle2 className="w-3 h-3" />
+                    ) : (
+                      <AlertTriangle className="w-3 h-3" />
+                    )}
+                    {reco.reviews.chairman.status}
+                  </div>
+                </div>
               </div>
             ) : (
               (['legal', 'finance', 'compliance', 'chairman'] as ReviewFunction[]).map((fn) => {
